@@ -21,4 +21,4 @@ else
     fi
 fi
 
-java -cp target/classes com.example.Main
+java -cp target/classes com.http.Main
