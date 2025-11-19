@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.http.config.cookie.Cookie;
-import com.http.config.status.HttpStatus;
+import com.http.config.enums.HttpStatus;
 
 public class HttpResponse {
 

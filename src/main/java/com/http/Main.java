@@ -1,19 +1,16 @@
 package com.http;
 
-import com.http.config.properties.PropertiesReader;
+import com.http.application.Application;
+import com.http.config.connectors.Connector;
+
 public class Main {
 
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-        System.out.println("Maven project is running successfully!");
+    public static void main(String[] args) throws Exception {
+        Application app = new Application();   
+        app.addConnector(new Connector(8080));
+        app.addConnector(new Connector(8081));
+        app.start();
 
-        System.out.println("-----------");
-        PropertiesReader config = new PropertiesReader();
-
-        
-        String port = config.getProperty("app.port");
-        
-      
-        System.out.println("Port: " + port);
+         Thread.currentThread().join();
     }
 }

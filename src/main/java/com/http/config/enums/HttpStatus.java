@@ -1,4 +1,4 @@
-package com.http.config.status;
+package com.http.config.enums;
 
 import java.util.HashMap;
 import java.util.Map;

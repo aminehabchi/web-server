@@ -14,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class HttpRequest {
     private Method method;
-    private Url utrl;
+    private Url url;
 
     private String httpVersion;
     private String Authorization;
