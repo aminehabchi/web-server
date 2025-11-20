@@ -1,9 +1,8 @@
 package com.http.application.routing;
 
-import com.http.application.ApplicationContext;
-import com.http.application.annotation.methodes.Get;
-import com.http.application.annotation.methodes.Post;
-import com.http.application.annotation.methodes.Delete;
+import com.http.annotation.methodes.Delete;
+import com.http.annotation.methodes.Get;
+import com.http.annotation.methodes.Post;
 import com.http.config.enums.HttpMethod;
 
 import java.lang.reflect.Method;
@@ -18,8 +17,8 @@ public class Router {
 
     private final Map<Class<?>, Object> controllerInstances;
 
-    public Router(ApplicationContext context) {
-        this.controllerInstances = context.getControllerBeans();
+    public Router(Map<Class<?>, Object> controllerInstances) {
+        this.controllerInstances = controllerInstances;
         registerAllControllerRoutes(); // automatically register routes
     }
 

@@ -2,7 +2,7 @@ package com.http;
 
 
 import com.http.application.Application;
-import com.http.application.ApplicationContext;
+import com.http.application.context.ApplicationContext;
 import com.http.config.connectors.Connector;
 
 public class Main {

@@ -1,4 +1,4 @@
-package com.http.config.response;
+package com.http.http.response;
 
 import java.util.ArrayList;
 import java.util.HashMap;

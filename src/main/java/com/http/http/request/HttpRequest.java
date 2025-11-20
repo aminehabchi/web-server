@@ -1,8 +1,8 @@
-package com.http.config.request;
+package com.http.http.request;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 
+import com.http.config.enums.HttpMethod;
 import com.http.config.url.Url;
 
 import lombok.Getter;
@@ -13,7 +13,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class HttpRequest {
-    private Method method;
+    private HttpMethod method;
     private Url url;
 
     private String httpVersion;

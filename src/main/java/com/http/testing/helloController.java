@@ -1,7 +1,7 @@
-package com.http.example;
+package com.http.testing;
 
-import com.http.application.annotation.classes.Controller;
-import com.http.application.annotation.methodes.Get;
+import com.http.annotation.classes.Controller;
+import com.http.annotation.methodes.Get;
 
 @Controller(path = "/api")
 public class helloController {

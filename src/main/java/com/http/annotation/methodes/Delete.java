@@ -1,4 +1,4 @@
-package com.http.application.annotation.methodes;
+package com.http.annotation.methodes;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -7,7 +7,7 @@ import java.lang.annotation.ElementType;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Post {
+public @interface Delete {
 
     String path();
 }

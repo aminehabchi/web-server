@@ -1,4 +1,4 @@
-package com.http.application.annotation.classes;
+package com.http.annotation.classes;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -7,6 +7,6 @@ import java.lang.annotation.ElementType;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Controller {
+public @interface Component {
     String path() default "";
 }

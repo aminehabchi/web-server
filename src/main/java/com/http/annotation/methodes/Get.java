@@ -1,12 +1,13 @@
-package com.http.application.annotation.classes;
+package com.http.annotation.methodes;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.annotation.ElementType;
 
-@Target(ElementType.TYPE)
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Service {
-    String path() default "";
+public @interface Get {
+
+    String path();
 }

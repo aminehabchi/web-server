@@ -1,5 +1,6 @@
 package com.http.config.connectors;
 
+import com.http.application.Application;
 import com.http.config.defaults.DefaultConnectorConfig;
 
 import java.io.IOException;
@@ -13,6 +14,7 @@ public class Connector {
     private int port;
     private long requestTimeout;
     private AsynchronousServerSocketChannel server;
+    private Application application;
 
     public Connector() {
         this.port = DefaultConnectorConfig.DEFAULT_PORT;
@@ -37,6 +39,12 @@ public class Connector {
         this.port = port;
         this.requestTimeout = requestTimeout;
     }
+
+    public void setApplication(Application application) {
+        this.application = application;
+    }
+
+
 
     // ---------------- CONNECT ----------------
     public void connect() {
@@ -67,7 +75,6 @@ public class Connector {
                     System.out.println("Failed to accept connection: " + exc);
                 }
             });
-
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -103,13 +110,9 @@ public class Connector {
                 }
 
                 buf.flip();
-                String msg = new String(buf.array(), 0, bytesRead);
-                System.out.println("Received: " + msg);
+                
+                application.ParseReaquest(Connector.this, client, buf.array());
 
-                // Echo back to client
-                writeToClient(client, msg);
-
-                // Continue reading
                 buf.clear();
                 client.read(buf, buf, this);
             }
@@ -126,7 +129,7 @@ public class Connector {
     }
 
     // ---------------- WRITE TO CLIENT ----------------
-    private void writeToClient(AsynchronousSocketChannel client, String msg) {
+    public void writeToClient(AsynchronousSocketChannel client, String msg) {
         ByteBuffer buffer = ByteBuffer.wrap(msg.getBytes());
 
         client.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
