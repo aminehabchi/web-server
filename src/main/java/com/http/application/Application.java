@@ -9,9 +9,7 @@ import com.http.application.dispatcher.Dispatcher;
 import com.http.application.routing.Router;
 import com.http.config.connectors.Connector;
 import com.http.http.request.HttpRequest;
-import com.http.http.request.RequestParser;
 import com.http.http.response.HttpResponse;
-import com.http.http.response.ResponseWriter;
 
 public class Application {
     private List<Connector> connectors;
@@ -19,12 +17,15 @@ public class Application {
     private ApplicationContext appContext;
 
     public Application(List<Connector> connectors) {
-        this.connectors = connectors;
         this.appContext = new ApplicationContext();
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
+        this.connectors = connectors;
+
     }
 
     public Application() {
+        this.appContext = new ApplicationContext();
+        this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
         this.connectors = new ArrayList<>();
     }
 
@@ -51,17 +52,25 @@ public class Application {
         HttpRequest request = null;
         try {
             // Parse the request
-            request = RequestParser.parseRequest(requestData.toString());
-
+            // request = RequestParser.parseRequest(requestData.toString());
+            request = HttpRequest.defaultRequest();
         } catch (Exception e) {
             e.printStackTrace();
             connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
             return;
         }
 
-        HttpResponse response = this.dispatcher.dispatch(request);
+        HttpResponse response = HttpResponse.defaultResponse();
+        try {
+            this.dispatcher.dispatch(request,response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+            return;
+        }
 
-        String res = ResponseWriter.write(response);
+        response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
+        String res = response.toString();
         connector.writeToClient(client, res);
     }
 

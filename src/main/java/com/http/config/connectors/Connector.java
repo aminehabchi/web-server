@@ -44,8 +44,6 @@ public class Connector {
         this.application = application;
     }
 
-
-
     // ---------------- CONNECT ----------------
     public void connect() {
         try {
@@ -58,10 +56,10 @@ public class Connector {
             server.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
                 @Override
                 public void completed(AsynchronousSocketChannel client, Void attachment) {
-                    try {
-                        System.out.println("Client connected: " + client.getRemoteAddress());
-                    } catch (IOException ignored) {
-                    }
+                    // try {
+                        // System.out.println("Client connected: " + client.getRemoteAddress());
+                    // } catch (IOException ignored) {
+                    // }
 
                     // Accept next connection
                     server.accept(null, this);
@@ -110,7 +108,7 @@ public class Connector {
                 }
 
                 buf.flip();
-                
+
                 application.ParseReaquest(Connector.this, client, buf.array());
 
                 buf.clear();
@@ -122,8 +120,8 @@ public class Connector {
                 try {
                     client.close();
                 } catch (Exception ignored) {
+                    System.out.println("Read failed: " + exc);
                 }
-                System.out.println("Read failed: " + exc);
             }
         });
     }
@@ -135,7 +133,16 @@ public class Connector {
         client.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
             @Override
             public void completed(Integer result, ByteBuffer attachment) {
-                // Write completed
+                try {
+                    // Ensure all bytes are written
+                    if (attachment.hasRemaining()) {
+                        client.write(attachment, attachment, this); // continue writing
+                    } else {
+                        client.close(); // close after writing
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error closing client: " + e);
+                }
             }
 
             @Override
