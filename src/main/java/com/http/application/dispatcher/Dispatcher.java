@@ -18,9 +18,7 @@ public class Dispatcher {
         this.argumentResolvers = new argumentResolvers();
     }
 
-    public HttpResponse dispatch(HttpRequest request) {
-        HttpResponse response = new HttpResponse();
-        ;
+    public void dispatch(HttpRequest request, HttpResponse response) {
         try {
             Route route = this.router.getRoute(request.getMethod(), request.getUrl().getPath());
             if (route != null) {
@@ -31,11 +29,13 @@ public class Dispatcher {
                 // Invoke the handler method and get the result
                 Object result = route.invoke(args);
 
-                // 
+                //
                 if (result instanceof HttpResponse) {
                     response = (HttpResponse) result;
                 } else {
                     response.setBody(result.toString());
+                    response.addHeader("Content-Type", "text/html");
+                    response.addHeader("Content-Length", String.valueOf(result.toString().length()));
                 }
 
             } else {
@@ -45,9 +45,8 @@ public class Dispatcher {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return;
         }
-        return response;
     }
 
     public List<?> getParameter(Method method) {

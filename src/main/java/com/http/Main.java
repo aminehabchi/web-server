@@ -12,7 +12,6 @@ public class Main {
         app.addConnector(new Connector(8081));
         app.start();
 
-        
         Thread.currentThread().join();
     }
 }

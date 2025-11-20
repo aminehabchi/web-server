@@ -39,16 +39,38 @@ public class HttpResponse {
     }
 
     // Getters
-    public String getVersion() { return version; }
-    public HttpStatus getStatus() { return status; }
-    public Map<String, String> getHeaders() { return headers; }
-    public List<Cookie> getCookies() { return cookies; }
-    public String getBody() { return body; }
+    public String getVersion() {
+        return version;
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
+
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    public List<Cookie> getCookies() {
+        return cookies;
+    }
+
+    public String getBody() {
+        return body;
+    }
 
     // Setters
-    public void setVersion(String version) { this.version = version; }
-    public void setStatus(HttpStatus status) { this.status = status; }
-    public void setBody(String body) { this.body = body; }
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public void setStatus(HttpStatus status) {
+        this.status = status;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
+    }
 
     // Convert to raw HTTP response string
     @Override
@@ -56,7 +78,7 @@ public class HttpResponse {
         StringBuilder sb = new StringBuilder();
 
         sb.append(version).append(" ").append(status.getCode())
-          .append(" ").append(status.getReason()).append("\r\n");
+                .append(" ").append(status.getReason()).append("\r\n");
 
         // Add headers
         for (Map.Entry<String, String> header : headers.entrySet()) {
@@ -75,5 +97,23 @@ public class HttpResponse {
         }
 
         return sb.toString();
+    }
+
+    public static HttpResponse defaultResponse() {
+        HttpResponse response = new HttpResponse();
+        response.setStatus(HttpStatus.OK);
+        response.setVersion("HTTP/1.1");
+        response.setBody("");
+
+        // default headers
+        response.addHeader("Content-Type", "text/html");
+
+        response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
+
+        // optional: add a default cookie
+        Cookie cookie = new Cookie("session_id", "1234567890");
+        response.addCookie(cookie);
+
+        return response;
     }
 }
