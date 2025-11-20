@@ -21,4 +21,4 @@ else
     fi
 fi
 
-java -cp target/classes com.http.Main
+mvn exec:java -Dexec.mainClass="com.http.Main"

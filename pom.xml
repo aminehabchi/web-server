@@ -26,7 +26,12 @@
             <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
-
+        <!-- reflections -->
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.10.2</version>
+        </dependency>
     </dependencies>
 
     <build>
