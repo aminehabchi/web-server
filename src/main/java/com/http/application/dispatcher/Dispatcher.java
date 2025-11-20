@@ -42,7 +42,7 @@ public class Dispatcher {
                 response.setStatus(HttpStatus.NOT_FOUND);
                 response.setBody("404 Not Found");
             }
-
+            
         } catch (Exception e) {
             e.printStackTrace();
             return;

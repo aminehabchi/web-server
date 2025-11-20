@@ -108,11 +108,6 @@ public class HttpResponse {
         // default headers
         response.addHeader("Content-Type", "text/html");
 
-        response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
-
-        // optional: add a default cookie
-        Cookie cookie = new Cookie("session_id", "1234567890");
-        response.addCookie(cookie);
 
         return response;
     }

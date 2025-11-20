@@ -10,7 +10,6 @@ import com.http.application.routing.Router;
 import com.http.config.connectors.Connector;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
-import com.http.http.response.ResponseWriter;
 
 public class Application {
     private List<Connector> connectors;
@@ -70,6 +69,7 @@ public class Application {
             return;
         }
 
+        response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
         String res = response.toString();
         connector.writeToClient(client, res);
     }
