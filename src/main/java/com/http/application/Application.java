@@ -47,8 +47,8 @@ public class Application {
         }
     }
 
-    // ---------------- Parser ----------------
-    public void ParseReaquest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+    // ---------------- handle Client Request ----------------
+    public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
         HttpRequest request = null;
         try {
             // Parse the request
@@ -62,7 +62,7 @@ public class Application {
 
         HttpResponse response = HttpResponse.defaultResponse();
         try {
-            this.dispatcher.dispatch(request,response);
+            this.dispatcher.dispatch(request, response);
         } catch (Exception e) {
             e.printStackTrace();
             connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
