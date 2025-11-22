@@ -13,7 +13,7 @@ public class helloController {
     @Get(path = "/hello")
     public String handleRequest(HttpRequest req, HttpResponse res, @RequestParam("page") int page,
             @RequestParam("sort") String sort, @RequestHeader("User-Agent") String header) {
-        // System.out.println("hello  from  hello");
+        System.out.println("hello  from  hello handler");
         // System.out.println("this is page => " + page);
         // System.out.println("this is sort => " + sort);
         // System.out.println("this is header => " + header);

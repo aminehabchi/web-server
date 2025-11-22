@@ -11,6 +11,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class HttpRequest {
+    private int port;
 
     private HttpMethod method;
     private Url url;
@@ -31,6 +32,8 @@ public class HttpRequest {
     public static HttpRequest defaultRequest() {
         HttpRequest request = new HttpRequest();
         request.setMethod(HttpMethod.GET); // default method
+
+        request.setPort(8081);
 
         // Complex URL with path and query parameters
         Url url = new Url("/hello");

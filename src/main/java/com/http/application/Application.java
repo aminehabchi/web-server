@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.http.application.context.ApplicationContext;
 import com.http.application.dispatcher.Dispatcher;
+import com.http.application.filters.FilterChain;
 import com.http.application.routing.Router;
 import com.http.config.connectors.Connector;
 import com.http.http.request.HttpRequest;
@@ -16,17 +17,19 @@ public class Application {
     private List<Connector> connectors;
     private Dispatcher dispatcher;
     private ApplicationContext appContext;
+    private FilterChain filaterChain;
 
     public Application(List<Connector> connectors) {
         this.appContext = new ApplicationContext();
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
+        this.filaterChain = new FilterChain(this.appContext.getFilterBeans());
         this.connectors = connectors;
-
     }
 
     public Application() {
         this.appContext = new ApplicationContext();
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
+        this.filaterChain = new FilterChain(this.appContext.getFilterBeans());
         this.connectors = new ArrayList<>();
     }
 
@@ -64,6 +67,18 @@ public class Application {
         }
 
         HttpResponse response = HttpResponse.defaultResponse();
+
+        try {
+            if (!this.filaterChain.applyFilters(request, response)) {
+                writeRsponseToClient(connector, client, response);
+                return;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+            return;
+        }
+
         try {
             this.dispatcher.dispatch(request, response);
         } catch (Exception e) {
@@ -72,9 +87,12 @@ public class Application {
             return;
         }
 
+        writeRsponseToClient(connector, client, response);
+    }
+
+    private void writeRsponseToClient(Connector connector, AsynchronousSocketChannel client, HttpResponse response) {
         response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
         String res = response.toString();
         connector.writeToClient(client, res);
     }
-
 }
