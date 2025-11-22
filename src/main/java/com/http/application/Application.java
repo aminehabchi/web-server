@@ -1,6 +1,7 @@
 package com.http.application;
 
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,8 @@ public class Application {
 
     // ---------------- handle Client Request ----------------
     public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+        String result = new String(requestData, StandardCharsets.UTF_8);
+        System.out.println(result);
         HttpRequest request = null;
         try {
             // Parse the request
