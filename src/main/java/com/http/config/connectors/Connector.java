@@ -94,7 +94,6 @@ public class Connector {
     // ---------------- READ FROM CLIENT ----------------
     private void readFromClient(AsynchronousSocketChannel client) {
         ByteBuffer buffer = ByteBuffer.allocate(256);
-
         client.read(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
             @Override
             public void completed(Integer bytesRead, ByteBuffer buf) {
@@ -109,7 +108,7 @@ public class Connector {
 
                 buf.flip();
 
-                application.ParseReaquest(Connector.this, client, buf.array());
+                application.handleClientRequest(Connector.this, client, buf.array());
 
                 buf.clear();
                 client.read(buf, buf, this);

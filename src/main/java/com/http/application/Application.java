@@ -1,6 +1,7 @@
 package com.http.application;
 
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,8 +48,10 @@ public class Application {
         }
     }
 
-    // ---------------- Parser ----------------
-    public void ParseReaquest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+    // ---------------- handle Client Request ----------------
+    public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+        String result = new String(requestData, StandardCharsets.UTF_8);
+        System.out.println(result);
         HttpRequest request = null;
         try {
             // Parse the request
@@ -62,7 +65,7 @@ public class Application {
 
         HttpResponse response = HttpResponse.defaultResponse();
         try {
-            this.dispatcher.dispatch(request,response);
+            this.dispatcher.dispatch(request, response);
         } catch (Exception e) {
             e.printStackTrace();
             connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
