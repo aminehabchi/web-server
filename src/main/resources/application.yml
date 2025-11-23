@@ -1,0 +1,25 @@
+# =========================
+# Servers Configuration
+# =========================
+servers:
+  # Server on port 8080
+  - port: 8080
+    max-client-body-size: 10MB
+    error:
+      404: /errors/404-8080.html
+      500: /errors/500-8080.html
+
+    routes:
+      static:
+        methods: [GET]
+        path: /static
+
+  # Server on port 8081
+  - port: 8081
+    max-client-body-size: 5MB
+    error:
+      404: /errors/404-8081.html
+      500: /errors/500-8081.html
+    routes:
+      methods: [GET]
+      
