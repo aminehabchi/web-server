@@ -10,6 +10,8 @@ import com.http.application.dispatcher.Dispatcher;
 import com.http.application.routing.Router;
 import com.http.config.connectors.Connector;
 import com.http.http.request.HttpRequest;
+import com.http.http.request.RequestParser;
+
 import com.http.http.response.HttpResponse;
 
 public class Application {
@@ -51,7 +53,10 @@ public class Application {
     // ---------------- handle Client Request ----------------
     public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
         String result = new String(requestData, StandardCharsets.UTF_8);
-        System.out.println(result);
+        System.out.println("result = " + result);
+        System.out.println("================================================================");
+
+        RequestParser.parseRequest(result);
         HttpRequest request = null;
         try {
             // Parse the request

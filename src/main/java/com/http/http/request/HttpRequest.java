@@ -29,6 +29,7 @@ public class HttpRequest {
 
     // Static factory method for default HttpRequest
     public static HttpRequest defaultRequest() {
+
         HttpRequest request = new HttpRequest();
         request.setMethod(HttpMethod.GET); // default method
 
