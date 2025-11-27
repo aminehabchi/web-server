@@ -24,7 +24,7 @@ public class HttpRequest {
     private String Body;
 
     public HttpRequest() {
-
+        headers = new HashMap<>();
     }
 
     // Static factory method for default HttpRequest
@@ -61,4 +61,5 @@ public class HttpRequest {
         return request;
     }
 
+ 
 }

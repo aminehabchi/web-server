@@ -93,7 +93,7 @@ public class Connector {
 
     // ---------------- READ FROM CLIENT ----------------
     private void readFromClient(AsynchronousSocketChannel client) {
-        ByteBuffer buffer = ByteBuffer.allocate(256);
+        ByteBuffer buffer = ByteBuffer.allocate(1000);
         client.read(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
             @Override
             public void completed(Integer bytesRead, ByteBuffer buf) {
