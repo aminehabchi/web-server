@@ -23,7 +23,7 @@ public class Connector {
     private static final int MAX_QUEUE_SIZE = 1024;
     private static final int MAX_BODY_SIZE = 5 * 1024 * 1024;
     private static final int MAX_CHUNK_LINE = 2048;
-    private static final byte[] HEADER_DELIMITER = new byte[] {'\r', '\n', '\r', '\n'};
+    private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
     private static final boolean DEBUG_LOG = false;
 
     private int port;
@@ -32,6 +32,7 @@ public class Connector {
     private Selector selector;
     private ServerSocketChannel serverChanel;
     private Queue<RequestTask> globalRequestQueue;
+
     private static class ConnectionContext {
         ByteBuffer readBuffer;
         byte[] headerBytes = new byte[MAX_HEADER_SIZE];
@@ -53,13 +54,13 @@ public class Connector {
         int writeState = 0;
         Queue<PendingRequest> requestQueue;
         boolean isProcessing = false;
-        
+
         ConnectionContext() {
             this.readBuffer = ByteBuffer.allocate(8192);
             this.lastActivity = System.currentTimeMillis();
             this.requestQueue = new ConcurrentLinkedQueue<>();
         }
-        
+
         void reset() {
             readBuffer.clear();
             headerBytesLen = 0;
@@ -97,7 +98,7 @@ public class Connector {
             pendingCrlfHalf = false;
             chunkBuffer = null;
         }
-        
+
         void updateActivity() {
             lastActivity = System.currentTimeMillis();
         }
@@ -106,6 +107,7 @@ public class Connector {
             return headerEndIndex >= 0;
         }
     }
+
     private static class RequestTask {
         SocketChannel clientChannel;
         byte[] headerBytes;
@@ -113,7 +115,8 @@ public class Connector {
         byte[] bodyBytes;
         SelectionKey selectionKey;
 
-        RequestTask(SocketChannel clientChannel, byte[] headerBytes, int headerLength, byte[] bodyBytes, SelectionKey selectionKey) {
+        RequestTask(SocketChannel clientChannel, byte[] headerBytes, int headerLength, byte[] bodyBytes,
+                SelectionKey selectionKey) {
             this.clientChannel = clientChannel;
             this.headerBytes = headerBytes;
             this.headerLength = headerLength;
@@ -121,6 +124,7 @@ public class Connector {
             this.selectionKey = selectionKey;
         }
     }
+
     private static class PendingRequest {
         byte[] headers;
         int headerLength;
@@ -178,7 +182,7 @@ public class Connector {
 
         while (true) {
             processPendingRequests();
-            
+
             selector.select(100);
             Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
             while (keys.hasNext()) {
@@ -211,10 +215,12 @@ public class Connector {
 
                         System.arraycopy(task.headerBytes, 0, requestBytes, 0, task.headerLength);
                         System.arraycopy(HEADER_DELIMITER, 0, requestBytes, task.headerLength, HEADER_DELIMITER.length);
-                        System.arraycopy(task.bodyBytes, 0, requestBytes, task.headerLength + HEADER_DELIMITER.length, task.bodyBytes.length);
+                        System.arraycopy(task.bodyBytes, 0, requestBytes, task.headerLength + HEADER_DELIMITER.length,
+                                task.bodyBytes.length);
 
                         if (DEBUG_LOG) {
-                            System.out.println("=== Processing Request ===\n" + new String(requestBytes, StandardCharsets.UTF_8));
+                            System.out.println(
+                                    "=== Processing Request ===\n" + new String(requestBytes, StandardCharsets.UTF_8));
                         }
 
                         application.ParseReaquest(this, task.clientChannel, requestBytes);
@@ -246,12 +252,12 @@ public class Connector {
     private void handleRead(SelectionKey key) {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         ConnectionContext ctx = (ConnectionContext) key.attachment();
-        
+
         if (ctx == null) {
             ctx = new ConnectionContext();
             key.attach(ctx);
         }
-        
+
         try {
             if (globalRequestQueue.size() >= MAX_QUEUE_SIZE) {
                 key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
@@ -259,7 +265,7 @@ public class Connector {
             }
 
             int bytesRead = clientChannel.read(ctx.readBuffer);
-            
+
             if (bytesRead == -1) {
                 clientChannel.close();
                 key.cancel();
@@ -284,10 +290,10 @@ public class Connector {
                             ctx.headerBytes[ctx.headerBytesLen++] = current;
 
                             if (ctx.headerBytesLen >= 4 &&
-                                ctx.headerBytes[ctx.headerBytesLen - 4] == '\r' &&
-                                ctx.headerBytes[ctx.headerBytesLen - 3] == '\n' &&
-                                ctx.headerBytes[ctx.headerBytesLen - 2] == '\r' &&
-                                ctx.headerBytes[ctx.headerBytesLen - 1] == '\n') {
+                                    ctx.headerBytes[ctx.headerBytesLen - 4] == '\r' &&
+                                    ctx.headerBytes[ctx.headerBytesLen - 3] == '\n' &&
+                                    ctx.headerBytes[ctx.headerBytesLen - 2] == '\r' &&
+                                    ctx.headerBytes[ctx.headerBytesLen - 1] == '\n') {
                                 ctx.headerEndIndex = ctx.headerBytesLen - 4;
                             }
                         }
@@ -334,7 +340,7 @@ public class Connector {
                         }
                     }
                     boolean bodyReady = (!ctx.chunked && ctx.bodyBytesReceived >= Math.max(ctx.contentLength, 0)) ||
-                                        (ctx.chunked && ctx.trailersComplete);
+                            (ctx.chunked && ctx.trailersComplete);
                     if (ctx.isHeaderComplete() && bodyReady) {
                         if (DEBUG_LOG) {
                             System.out.println("Request complete, queuing for processing...");
@@ -346,7 +352,8 @@ public class Connector {
                         } else {
                             bodyCopy = ctx.chunkBuffer != null ? ctx.chunkBuffer.toByteArray() : new byte[0];
                         }
-                        globalRequestQueue.offer(new RequestTask(clientChannel, headerCopy, ctx.headerEndIndex, bodyCopy, key));
+                        globalRequestQueue
+                                .offer(new RequestTask(clientChannel, headerCopy, ctx.headerEndIndex, bodyCopy, key));
                         key.interestOps(0);
                         ctx.prepareForNextRequest();
                     }
@@ -364,8 +371,11 @@ public class Connector {
             System.err.println("Read failed: " + e.getMessage());
         }
     }
-    
+
     private ContentMeta parseContentMeta(byte[] headerBytes, int headerLength) {
+        if (headerBytes == null || headerLength <= 0) {
+            return new ContentMeta();
+        }
         ContentMeta meta = new ContentMeta();
         String headers = new String(headerBytes, 0, headerLength, StandardCharsets.UTF_8);
         String[] lines = headers.split("\r\n");
@@ -392,7 +402,8 @@ public class Connector {
         boolean chunked = false;
     }
 
-    private boolean accumulateChunkedBody(ConnectionContext ctx, SocketChannel clientChannel, SelectionKey key) throws IOException {
+    private boolean accumulateChunkedBody(ConnectionContext ctx, SocketChannel clientChannel, SelectionKey key)
+            throws IOException {
         while (ctx.readBuffer.hasRemaining()) {
             if (!ctx.chunkSizeParsed) {
                 String sizeLine = readLine(ctx, ctx.readBuffer);
@@ -474,7 +485,8 @@ public class Connector {
         return false;
     }
 
-    private boolean consumeChunkCrlf(ConnectionContext ctx, SocketChannel channel, SelectionKey key) throws IOException {
+    private boolean consumeChunkCrlf(ConnectionContext ctx, SocketChannel channel, SelectionKey key)
+            throws IOException {
         if (ctx.readBuffer.remaining() >= 2) {
             byte b1 = ctx.readBuffer.get();
             byte b2 = ctx.readBuffer.get();
@@ -586,7 +598,7 @@ public class Connector {
         for (SelectionKey key : selector.keys()) {
             if (key.channel() instanceof SocketChannel && key.isValid()) {
                 ConnectionContext ctx = (ConnectionContext) key.attachment();
-                
+
                 if (ctx != null && currentTime - ctx.lastActivity > requestTimeout) {
                     try {
                         System.out.println("Connection timeout, closing client");
