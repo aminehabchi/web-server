@@ -281,6 +281,7 @@ public class Connector {
                         while (ctx.readBuffer.hasRemaining() && !ctx.isHeaderComplete()) {
                             if (ctx.headerBytesLen >= MAX_HEADER_SIZE) {
                                 System.err.println("Header too large, closing connection.");
+                                // we should create a response that return 400
                                 clientChannel.close();
                                 key.cancel();
                                 return;
