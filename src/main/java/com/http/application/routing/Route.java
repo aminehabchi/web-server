@@ -2,7 +2,7 @@ package com.http.application.routing;
 
 import java.lang.reflect.Method;
 
-class Route {
+public class Route {
     private final String path;
     private final Method method;
     private final Object controllerInstance;

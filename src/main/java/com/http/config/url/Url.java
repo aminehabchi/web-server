@@ -1,6 +1,8 @@
 package com.http.config.url;
 
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,10 +34,12 @@ public class Url {
         }
     }
 
-    private void parse(String rawUrl) throws Exception {
-        URL url = new URL(rawUrl);
+    private void parse(String rawUrl) throws MalformedURLException {
+        // Add default scheme if missing
+        URL url = rawUrl.startsWith("http://") || rawUrl.startsWith("https://")
+                ? new URL(rawUrl)
+                : new URL("http://localhost" + rawUrl); // fallback host for relative URLs
 
-        // Basic URL components
         this.scheme = url.getProtocol();
         this.protocol = url.getProtocol();
         this.authority = url.getAuthority();
@@ -49,25 +53,25 @@ public class Url {
         parseQuery(url.getQuery());
     }
 
+    public void addParameter(String key, String value) {
+        queryParams.put(key, value); // overwrite existing
+    }
+
+    public Map<String, String> getQueryParams() {
+        return Collections.unmodifiableMap(queryParams);
+    }
+
     private void parseHost(String host) {
-        // IPv6 [2001:db8::1]
-        if (host.startsWith("[") && host.endsWith("]")) {
+        if (host == null || host.isEmpty()) {
             this.subdomain = "";
-            this.domain = host;
+            this.domain = "";
             this.tld = "";
             return;
         }
 
-        // localhost
-        if (host.equals("localhost")) {
-            this.subdomain = "";
-            this.domain = "localhost";
-            this.tld = "";
-            return;
-        }
-
-        // IPv4 192.168.1.10
-        if (host.matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+        // Handle IP or localhost
+        if (host.matches("\\d+\\.\\d+\\.\\d+\\.\\d+") || host.equals("localhost")
+                || (host.startsWith("[") && host.endsWith("]"))) {
             this.subdomain = "";
             this.domain = host;
             this.tld = "";
@@ -75,10 +79,8 @@ public class Url {
         }
 
         String[] parts = host.split("\\.");
-
         if (parts.length >= 3) {
-            // extract multi-level TLD: com, ma, co.uk, org.ma, etc.
-            this.subdomain = parts[0];
+            this.subdomain = String.join(".", java.util.Arrays.copyOf(parts, parts.length - 2));
             this.domain = parts[parts.length - 2] + "." + parts[parts.length - 1];
             this.tld = parts[parts.length - 1];
         } else if (parts.length == 2) {
@@ -101,9 +103,8 @@ public class Url {
         }
 
         int lastSlash = path.lastIndexOf("/");
-        directory = path.substring(0, lastSlash + 1);
-
-        fileName = path.substring(lastSlash + 1);
+        directory = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : "/";
+        fileName = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
 
         if (fileName.contains(".")) {
             int dotIndex = fileName.lastIndexOf(".");
@@ -114,19 +115,27 @@ public class Url {
     }
 
     private void parseQuery(String query) {
-        if (query == null || query.isEmpty()) {
+        if (query == null || query.isEmpty())
             return;
-        }
 
         for (String pair : query.split("&")) {
             String[] kv = pair.split("=", 2);
-            String key = kv[0];
-            String value = kv.length > 1 ? kv[1] : "";
-            queryParams.put(key, value);
+            queryParams.put(kv[0], kv.length > 1 ? kv[1] : "");
         }
     }
 
     public String getQueryParam(String key) {
         return queryParams.get(key);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(path);
+        if (!queryParams.isEmpty()) {
+            sb.append("?");
+            queryParams.forEach((k, v) -> sb.append(k).append("=").append(v).append("&"));
+            sb.setLength(sb.length() - 1); // remove trailing &
+        }
+        return sb.toString();
     }
 }

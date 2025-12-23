@@ -6,6 +6,7 @@ import com.http.annotation.classes.Component;
 import com.http.annotation.classes.Controller;
 import com.http.annotation.classes.Repository;
 import com.http.annotation.classes.Service;
+import com.http.application.filters.OncePerRequestFilter;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -19,6 +20,8 @@ public class ApplicationContext {
         try {
             Set<Class<?>> classes = scanForAnnotatedClasses();
             createBeans(classes); // create instances
+
+            getFilterBeans();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -33,7 +36,6 @@ public class ApplicationContext {
         classes.addAll(reflections.getTypesAnnotatedWith(Service.class));
         classes.addAll(reflections.getTypesAnnotatedWith(Component.class));
         classes.addAll(reflections.getTypesAnnotatedWith(Repository.class));
-
         return classes;
     }
 
@@ -75,6 +77,14 @@ public class ApplicationContext {
         return controllers;
     }
 
-
+    public Map<Class<?>, Object> getFilterBeans() {
+        Map<Class<?>, Object> filters = new HashMap<>();
+        for (Map.Entry<Class<?>, Object> entry : beans.entrySet()) {
+            if (OncePerRequestFilter.class.isAssignableFrom(entry.getKey())) {
+                filters.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return filters;
+    }
 
 }

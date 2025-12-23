@@ -61,6 +61,7 @@ public class Router {
             case GET -> getRouteMap.get(path);
             case POST -> postRouteMap.get(path);
             case DELETE -> deleteRouteMap.get(path);
+            default -> null;
         };
     }
 

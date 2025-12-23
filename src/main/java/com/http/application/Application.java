@@ -1,31 +1,35 @@
 package com.http.application;
 
-import java.nio.channels.SocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.http.application.context.ApplicationContext;
 import com.http.application.dispatcher.Dispatcher;
+import com.http.application.filters.FilterChain;
 import com.http.application.routing.Router;
 import com.http.config.connectors.Connector;
 import com.http.http.request.HttpRequest;
-import com.http.http.request.RequestParser;
 import com.http.http.response.HttpResponse;
-import com.http.http.response.ResponseWriter;
 
 public class Application {
     private List<Connector> connectors;
     private Dispatcher dispatcher;
     private ApplicationContext appContext;
+    private FilterChain filaterChain;
 
     public Application(List<Connector> connectors) {
-        this.connectors = connectors;
         this.appContext = new ApplicationContext();
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
+        this.filaterChain = new FilterChain(this.appContext.getFilterBeans());
+        this.connectors = connectors;
     }
 
     public Application() {
+        this.appContext = new ApplicationContext();
+        this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
+        this.filaterChain = new FilterChain(this.appContext.getFilterBeans());
         this.connectors = new ArrayList<>();
         this.appContext = new ApplicationContext();
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
@@ -49,35 +53,48 @@ public class Application {
         }
     }
 
-    // ---------------- Parser ----------------
-    public void ParseReaquest(Connector connector, SocketChannel client, byte[] requestData) {
+    // ---------------- handle Client Request ----------------
+    public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+        String result = new String(requestData, StandardCharsets.UTF_8);
+        System.out.println(result);
         HttpRequest request = null;
         try {
-            String rawRequest = new String(requestData, java.nio.charset.StandardCharsets.UTF_8);
-            System.out.println("=== Raw Request ===\n" + rawRequest + "\n==================");
-            request = RequestParser.parseRequest(rawRequest);
-
+            // Parse the request
+            // request = RequestParser.parseRequest(requestData.toString());
+            request = HttpRequest.defaultRequest();
         } catch (Exception e) {
             e.printStackTrace();
             connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
             return;
         }
 
-        if (this.dispatcher != null) {
-            HttpResponse response = this.dispatcher.dispatch(request);
-            String res = ResponseWriter.write(response);
-            connector.writeToClient(client, res);
-        } else {
-            System.out.println("DEBUG: " + client + "\n");
-            String body = "Hello, World!\n";
+        HttpResponse response = HttpResponse.defaultResponse();
 
-            String response = "HTTP/1.1 200 OK\r\n" +
-                    "Content-Type: text/plain\r\n" +
-                    "Content-Length: " + body.getBytes(StandardCharsets.UTF_8).length + "\r\n" +
-                    "\r\n" +
-                    body;
-
-            connector.writeToClient(client, response);
+        try {
+            if (!this.filaterChain.applyFilters(request, response)) {
+                writeRsponseToClient(connector, client, response);
+                return;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+            return;
         }
+
+        try {
+            this.dispatcher.dispatch(request, response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+            return;
+        }
+
+        writeRsponseToClient(connector, client, response);
+    }
+
+    private void writeRsponseToClient(Connector connector, AsynchronousSocketChannel client, HttpResponse response) {
+        response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
+        String res = response.toString();
+        connector.writeToClient(client, res);
     }
 }
