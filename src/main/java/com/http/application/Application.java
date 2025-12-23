@@ -1,6 +1,7 @@
 package com.http.application;
 
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +55,7 @@ public class Application {
     }
 
     // ---------------- handle Client Request ----------------
-    public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+    public void handleClientRequest(Connector connector, SocketChannel client, byte[] requestData) {
         String result = new String(requestData, StandardCharsets.UTF_8);
         System.out.println(result);
         HttpRequest request = null;
@@ -92,7 +93,7 @@ public class Application {
         writeRsponseToClient(connector, client, response);
     }
 
-    private void writeRsponseToClient(Connector connector, AsynchronousSocketChannel client, HttpResponse response) {
+    private void writeRsponseToClient(Connector connector, SocketChannel client, HttpResponse response) {
         response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
         String res = response.toString();
         connector.writeToClient(client, res);
