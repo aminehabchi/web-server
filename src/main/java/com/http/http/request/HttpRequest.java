@@ -6,10 +6,12 @@ import com.http.config.enums.HttpMethod;
 import com.http.config.url.Url;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class HttpRequest {
     private int port;
 
@@ -19,50 +21,9 @@ public class HttpRequest {
     private String httpVersion;
     private String Authorization;
 
-    private HashMap<String, String> headers;
-    private HashMap<String, String> cookies;
+    private HashMap<String, String> headers = new HashMap<>();
+    private HashMap<String, String> cookies = new HashMap<>();
 
     private String Body;
 
-    public HttpRequest() {
-        headers = new HashMap<>();
-    }
-
-    // Static factory method for default HttpRequest
-    public static HttpRequest defaultRequest() {
-
-        HttpRequest request = new HttpRequest();
-        request.setMethod(HttpMethod.GET); // default method
-
-        request.setPort(8081);
-
-        // Complex URL with path and query parameters
-        Url url = new Url("/hello");
-        // Suppose your Url class has a method to add parameters
-        url.addParameter("page", "1");
-        url.addParameter("limit", "20");
-        url.addParameter("sort", "name");
-        request.setUrl(url);
-
-        request.setHttpVersion("HTTP/1.1"); // default HTTP version
-        request.setAuthorization(""); // empty by default
-
-        // Fill headers with common default values
-        HashMap<String, String> defaultHeaders = new HashMap<>();
-        defaultHeaders.put("Accept", "*/*");
-        defaultHeaders.put("User-Agent", "JavaHttpClient/1.0");
-        defaultHeaders.put("Content-Type", "application/json");
-        request.setHeaders(defaultHeaders);
-
-        // Fill cookies with some example defaults
-        HashMap<String, String> defaultCookies = new HashMap<>();
-        defaultCookies.put("session_id", "1234567890");
-        defaultCookies.put("lang", "en");
-        request.setCookies(defaultCookies);
-
-        request.setBody(""); // empty body
-        return request;
-    }
-
- 
 }

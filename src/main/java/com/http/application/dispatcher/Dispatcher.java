@@ -18,6 +18,7 @@ public class Dispatcher extends ArgumentResolvers {
 
     public void dispatch(HttpRequest request, HttpResponse response) {
         try {
+            System.out.println(request.getUrl());
             // 1. Find matching route
             Route route = this.router.getRoute(request.getMethod(), request.getUrl().getPath());
             if (route == null) {

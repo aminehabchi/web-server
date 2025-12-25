@@ -55,43 +55,48 @@ public class Application {
 
     // ---------------- handle Client Request ----------------
     public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+        // Step 1: Convert raw request data to a String
         String result = new String(requestData, StandardCharsets.UTF_8);
-        System.out.println("result = " + result);
-        System.out.println("================================================================");
 
-        RequestParser.parseRequest(result);
         HttpRequest request = null;
         try {
-            // Parse the request
-            // request = RequestParser.parseRequest(requestData.toString());
-            request = HttpRequest.defaultRequest();
+            // Step 2: Parse the HTTP request
+            request = RequestParser.parseRequest(result);
         } catch (Exception e) {
+            // Handle parsing errors and respond with 500 Internal Server Error
             e.printStackTrace();
             connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
             return;
         }
 
+        // Step 3: Create a default HTTP response object
         HttpResponse response = HttpResponse.defaultResponse();
 
         try {
+            // Step 4: Apply filters (e.g., authentication, logging, etc.)
+            // If any filter blocks the request, send the response immediately
             if (!this.filaterChain.applyFilters(request, response)) {
                 writeRsponseToClient(connector, client, response);
                 return;
             }
         } catch (Exception e) {
+            // Handle filter errors and respond with 500 Internal Server Error
             e.printStackTrace();
             connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
             return;
         }
 
         try {
+            // Step 5: Dispatch the request to the appropriate handler/controller
             this.dispatcher.dispatch(request, response);
         } catch (Exception e) {
+            // Handle dispatch errors and respond with 500 Internal Server Error
             e.printStackTrace();
             connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
             return;
         }
 
+        // Step 6: Send the final response back to the client
         writeRsponseToClient(connector, client, response);
     }
 

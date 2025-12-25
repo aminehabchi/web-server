@@ -1,66 +1,89 @@
 package com.http.http.request;
 
 import com.http.config.enums.HttpMethod;
+import com.http.config.url.Url;
+
+import java.util.Arrays;
 
 enum Level {
     LEVEL_START,
     LEVEL_HEADER,
     LEVEL_BODY
 }
+
 public class RequestParser {
+
     public static HttpRequest parseRequest(String rawRequest) {
-        String target = "\r\n";
-        int index = rawRequest.indexOf(target);
+        String[] lines = rawRequest.split("\r\n");
         Level level = Level.LEVEL_START;
         HttpRequest httpRequest = new HttpRequest();
-        while(index != -1) {
-            String line = rawRequest.substring(0, index);
-            if (line.equals("") && level.equals(Level.LEVEL_HEADER)) {
-                level = getNextLevel(level);
-            }
-            if (level.equals(Level.LEVEL_START)) {
-                String[] start_line_items = line.split(" ");
-                if (start_line_items.length != 3) {
-                    return null;
-                }
-                System.out.println("start_line_items[0] = " + start_line_items[0]);
-                System.out.println("start_line_items[1] = " + start_line_items[1]);
-                System.out.println("start_line_items[2] = " + start_line_items[2]);
-                httpRequest.setMethod(HttpMethod.fromReason(start_line_items[0]));
-                httpRequest.setHttpVersion(start_line_items[2]);
-                level = getNextLevel(level);
-            } else if(level.equals(Level.LEVEL_HEADER)) {
-                String[] header = line.split(":");
-                if (header.length < 2 ) {
-                    return null;
-                }
-                String key = header[0].trim();
-                String value = header[1].trim();
-                if (key.equals("Host")) {
-                    value  = value + ":" + header[2];
-                }
-                System.out.println(String.format("{ key = %s; value = %s }", key, value));
-                httpRequest.getHeaders().put(key,value);
-            } else {
-                System.out.println(String.format("body = { %s }", line));
-            }
-            rawRequest = rawRequest.substring(index + target.length());
-            index = rawRequest.indexOf(target);
-            //System.out.println("last line = " + line);
-        }
-        return httpRequest;
-    }
 
-    private static Level getNextLevel(Level level) {
-        switch(level) {
-            case LEVEL_START:
-                return Level.LEVEL_HEADER;
-            case LEVEL_HEADER:
-                return Level.LEVEL_BODY;
-            case LEVEL_BODY:
-                return null;
-            default:
-                return null;
+        StringBuilder bodyBuilder = new StringBuilder();
+
+        for (String line : lines) {
+            switch (level) {
+                case LEVEL_START -> {
+                    // Parse request line: METHOD URL HTTP/VERSION
+                    String[] startLineItems = line.split(" ");
+                    if (startLineItems.length != 3) return null;
+
+                    httpRequest.setMethod(HttpMethod.fromReason(startLineItems[0]));
+                    httpRequest.setUrl(new Url(startLineItems[1]));
+                    httpRequest.setHttpVersion(startLineItems[2]);
+
+                    level = Level.LEVEL_HEADER;
+                }
+
+                case LEVEL_HEADER -> {
+                    if (line.isEmpty()) {
+                        // Empty line means body starts next
+                        level = Level.LEVEL_BODY;
+                        continue;
+                    }
+
+                    String[] headerParts = line.split(":", 2);
+                    if (headerParts.length < 2) continue;
+
+                    String key = headerParts[0].trim();
+                    String value = headerParts[1].trim();
+
+                    // Special case: Host header may include port
+                    if (key.equalsIgnoreCase("Host") && value.contains(":")) {
+                        String[] hostParts = value.split(":");
+                        value = hostParts[0];
+                        httpRequest.setPort(Integer.parseInt(hostParts[1]));
+                    }
+
+                    httpRequest.getHeaders().put(key, value);
+
+                    // Parse cookies if header is Cookie
+                    if (key.equalsIgnoreCase("Cookie")) {
+                        Arrays.stream(value.split(";"))
+                                .map(String::trim)
+                                .map(s -> s.split("=", 2))
+                                .forEach(pair -> {
+                                    if (pair.length == 2)
+                                        httpRequest.getCookies().put(pair[0], pair[1]);
+                                });
+                    }
+
+                    // Parse Authorization header
+                    if (key.equalsIgnoreCase("Authorization")) {
+                        httpRequest.setAuthorization(value);
+                    }
+                }
+
+                case LEVEL_BODY -> {
+                    bodyBuilder.append(line).append("\n");
+                }
+            }
         }
+
+        // Set body if present
+        if (bodyBuilder.length() > 0) {
+            httpRequest.setBody(bodyBuilder.toString().trim());
+        }
+
+        return httpRequest;
     }
 }
