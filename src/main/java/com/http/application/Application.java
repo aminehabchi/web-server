@@ -56,8 +56,7 @@ public class Application {
         }
     }
 
-    // ---------------- handle Client Request ----------------
-    public void handleClientRequest(Connector connector, AsynchronousSocketChannel client, byte[] requestData) {
+    public void handleClientRequest(Connector connector, SocketChannel client, byte[] requestData) {
         // Step 1: Convert raw request data to a String
         String result = new String(requestData, StandardCharsets.UTF_8);
 
