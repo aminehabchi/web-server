@@ -99,6 +99,11 @@ public class Application {
         }
 
         /*************************************************************
+         * serve error page based on configuration
+         *************************************************************/
+        configurationValidator.checkErrorPage(request, response);
+
+        /*************************************************************
          * Send the final response back to the client
          *************************************************************/
         writeRsponseToClient(connector, client, response);

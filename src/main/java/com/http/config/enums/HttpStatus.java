@@ -18,6 +18,8 @@ public enum HttpStatus {
     UNAUTHORIZED(401, "Unauthorized"),
     FORBIDDEN(403, "Forbidden"),
     NOT_FOUND(404, "Not Found"),
+    METHOD_NOT_ALLOWED(405, "Method Not Allowed"),
+    PAYLOAD_TOO_LARGE(413, "Payload Too Large"),
 
     // 5xx Server Errors
     INTERNAL_SERVER_ERROR(500, "Internal Server Error"),
@@ -56,13 +58,13 @@ public enum HttpStatus {
         return code + " " + reason;
     }
 
-
     public static HttpStatus fromCode(int code) {
         return CODE_MAP.getOrDefault(code, INTERNAL_SERVER_ERROR);
     }
 
     public static HttpStatus fromReason(String reason) {
-        if (reason == null) return INTERNAL_SERVER_ERROR;
+        if (reason == null)
+            return INTERNAL_SERVER_ERROR;
         return REASON_MAP.getOrDefault(reason.toUpperCase(), INTERNAL_SERVER_ERROR);
     }
 }
