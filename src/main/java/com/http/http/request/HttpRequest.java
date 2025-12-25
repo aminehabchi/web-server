@@ -25,11 +25,12 @@ public class HttpRequest {
     private String Body;
 
     public HttpRequest() {
-
+        headers = new HashMap<>();
     }
 
     // Static factory method for default HttpRequest
     public static HttpRequest defaultRequest() {
+
         HttpRequest request = new HttpRequest();
         request.setMethod(HttpMethod.GET); // default method
 
@@ -63,4 +64,5 @@ public class HttpRequest {
         return request;
     }
 
+ 
 }
