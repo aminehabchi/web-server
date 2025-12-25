@@ -68,7 +68,8 @@ public class Application {
          * Check if request is valid based on config
          ********************************************/
         if (!configurationValidator.isValidRequest(request)) {
-            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+            response.setBody("not match config");
+            writeRsponseToClient(connector, client, response);
             return;
         }
 

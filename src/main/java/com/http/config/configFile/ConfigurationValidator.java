@@ -44,13 +44,46 @@ public class ConfigurationValidator {
 
     public boolean isValidRequest(HttpRequest request) {
         try {
-            
+            // Check if port exists in configuration
+            ConfigServer targetServer = null;
+            for (ConfigServer server : servers) {
+                if (server.getPorts().contains(request.getPort())) {
+                    targetServer = server;
+                    break;
+                }
+            }
+
+            if (targetServer == null) {
+                // Port not found
+                return false;
+            }
+
+            // Optional: check Host header
+            String hostHeader = request.getHeaders().getOrDefault("Host", "");
+            if (!targetServer.getHosts().contains(hostHeader) && !targetServer.isDefault()) {
+                return false;
+            }
+
+            // Check body size
+            if (request.getBody() != null && request.getBody().length() > targetServer.getClientMaxBodySize()) {
+                return false;
+            }
+
+            // Optional: check route/method
+            // if (targetServer.getRoutes() != null) {
+            //     boolean routeValid = targetServer.getRoutes().stream()
+            //             .anyMatch(route -> route.getPath().equals(request.getUrl().getPath())
+            //                     && route.getMethods().contains(request.getMethod()));
+            //     if (!routeValid) {
+            //         return false;
+            //     }
+            // }
+
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
-
-        return true;
     }
 
 }
