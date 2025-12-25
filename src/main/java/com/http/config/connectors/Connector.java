@@ -14,6 +14,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -26,7 +27,7 @@ public class Connector {
     private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
     private static final boolean DEBUG_LOG = false;
 
-    private int[] ports = { 8080, 8082 };
+    private int[] ports;
     private long requestTimeout;
     private Application application;
     private Selector selector;
@@ -147,7 +148,7 @@ public class Connector {
     }
 
     public Connector(int[] ports) {
-        this.validatePort(ports);
+
         this.ports = ports;
         this.requestTimeout = DefaultConnectorConfig.DEFAULT_REQUEST_TIMEOUT;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
@@ -161,7 +162,6 @@ public class Connector {
     }
 
     public Connector(int[] ports, long requestTimeout) {
-        this.validatePort(ports);
         this.validateRequestTimeout(requestTimeout);
         this.ports = ports;
         this.requestTimeout = requestTimeout;
@@ -170,6 +170,11 @@ public class Connector {
 
     public void setApplication(Application application) {
         this.application = application;
+    }
+
+    public void setPorts(List<Integer> portList) {
+        // Convert List<Integer> to int[]
+        this.ports = portList.stream().mapToInt(Integer::intValue).toArray();
     }
 
     public void connect() throws IOException {
@@ -708,11 +713,6 @@ public class Connector {
         return ports;
     }
 
-    public void setPort(int[] ports) {
-        validatePort(ports);
-        this.ports = ports;
-    }
-
     public long getRequestTimeout() {
         return requestTimeout;
     }
@@ -720,14 +720,6 @@ public class Connector {
     public void setRequestTimeout(long requestTimeout) {
         validateRequestTimeout(requestTimeout);
         this.requestTimeout = requestTimeout;
-    }
-
-    public void validatePort(int[] ports) {
-        for (int port : ports) {
-            if (port < 1 || port > 65535) {
-                throw new IllegalArgumentException("Port number must be between 1 and 65535");
-            }
-        }
     }
 
     public void validateRequestTimeout(long requestTimeout) {

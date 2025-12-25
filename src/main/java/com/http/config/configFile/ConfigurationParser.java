@@ -5,7 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-public class ConfigParser {
+public class ConfigurationParser {
 
     public static List<ConfigServer> parse(String path) {
         List<ConfigServer> servers = new ArrayList<>();
