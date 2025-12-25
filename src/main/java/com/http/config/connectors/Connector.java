@@ -26,7 +26,7 @@ public class Connector {
     private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
     private static final boolean DEBUG_LOG = false;
 
-    private int port;
+    private int[] ports = { 8080, 8082 };
     private long requestTimeout;
     private Application application;
     private Selector selector;
@@ -141,14 +141,14 @@ public class Connector {
     }
 
     public Connector() {
-        this.port = DefaultConnectorConfig.DEFAULT_PORT;
+        // this.port = DefaultConnectorConfig.DEFAULT_PORT;
         this.requestTimeout = DefaultConnectorConfig.DEFAULT_REQUEST_TIMEOUT;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
     }
 
-    public Connector(int port) {
-        this.validatePort(port);
-        this.port = port;
+    public Connector(int[] ports) {
+        this.validatePort(ports);
+        this.ports = ports;
         this.requestTimeout = DefaultConnectorConfig.DEFAULT_REQUEST_TIMEOUT;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
     }
@@ -156,14 +156,14 @@ public class Connector {
     public Connector(long requestTimeout) {
         this.validateRequestTimeout(requestTimeout);
         this.requestTimeout = requestTimeout;
-        this.port = DefaultConnectorConfig.DEFAULT_PORT;
+        // this.port = DefaultConnectorConfig.DEFAULT_PORT;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
     }
 
-    public Connector(int port, long requestTimeout) {
-        this.validatePort(port);
+    public Connector(int[] ports, long requestTimeout) {
+        this.validatePort(ports);
         this.validateRequestTimeout(requestTimeout);
-        this.port = port;
+        this.ports = ports;
         this.requestTimeout = requestTimeout;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
     }
@@ -174,12 +174,13 @@ public class Connector {
 
     public void connect() throws IOException {
         selector = Selector.open();
-        serverChanel = ServerSocketChannel.open();
-        serverChanel.bind(new InetSocketAddress(port));
-        serverChanel.configureBlocking(false);
-        serverChanel.register(selector, SelectionKey.OP_ACCEPT);
-
-        System.out.println("Server started on port " + port);
+        for (int port : ports) {
+            serverChanel = ServerSocketChannel.open();
+            serverChanel.bind(new InetSocketAddress(port));
+            serverChanel.configureBlocking(false);
+            serverChanel.register(selector, SelectionKey.OP_ACCEPT, port);
+            System.out.println("Server started on port " + port);
+        }
 
         while (true) {
             processPendingRequests();
@@ -697,19 +698,19 @@ public class Connector {
             if (serverChanel != null && serverChanel.isOpen()) {
                 serverChanel.close();
             }
-            System.out.println("Server on port " + port + " stopped.");
+            System.out.println("Server on ports " + ports + " stopped.");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public int getPort() {
-        return port;
+    public int[] getPort() {
+        return ports;
     }
 
-    public void setPort(int port) {
-        validatePort(port);
-        this.port = port;
+    public void setPort(int[] ports) {
+        validatePort(ports);
+        this.ports = ports;
     }
 
     public long getRequestTimeout() {
@@ -721,9 +722,11 @@ public class Connector {
         this.requestTimeout = requestTimeout;
     }
 
-    public void validatePort(int port) {
-        if (port < 1 || port > 65535) {
-            throw new IllegalArgumentException("Port number must be between 1 and 65535");
+    public void validatePort(int[] ports) {
+        for (int port : ports) {
+            if (port < 1 || port > 65535) {
+                throw new IllegalArgumentException("Port number must be between 1 and 65535");
+            }
         }
     }
 
