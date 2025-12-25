@@ -54,13 +54,11 @@ public class Connector {
         long lastActivity;
         ByteBuffer writeBuffer = null;
         int writeState = 0;
-        Queue<PendingRequest> requestQueue;
         boolean isProcessing = false;
 
         ConnectionContext() {
             this.readBuffer = ByteBuffer.allocate(8192);
             this.lastActivity = System.currentTimeMillis();
-            this.requestQueue = new ConcurrentLinkedQueue<>();
         }
 
         void reset() {
@@ -81,7 +79,6 @@ public class Connector {
             writeBuffer = null;
             writeState = 0;
             isProcessing = false;
-            requestQueue.clear();
             lastActivity = System.currentTimeMillis();
         }
 
@@ -124,20 +121,6 @@ public class Connector {
             this.headerLength = headerLength;
             this.bodyBytes = bodyBytes;
             this.selectionKey = selectionKey;
-        }
-    }
-
-    private static class PendingRequest {
-        byte[] headers;
-        int headerLength;
-        byte[] bodyBytes;
-        long queuedTime;
-
-        PendingRequest(byte[] headers, int headerLength, byte[] bodyBytes) {
-            this.headers = headers;
-            this.headerLength = headerLength;
-            this.bodyBytes = bodyBytes;
-            this.queuedTime = System.currentTimeMillis();
         }
     }
 
