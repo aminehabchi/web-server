@@ -67,35 +67,41 @@ public class Application {
         /********************************************
          * Check if request is valid based on config
          ********************************************/
-        if (!configurationValidator.isValidRequest(request)) {
-            response.setBody("not match config");
+        if (!configurationValidator.isValidRequest(request, response)) {
             writeRsponseToClient(connector, client, response);
             return;
         }
 
         /********************************************
-         * Apply filters
+         * Check if path exist in handler
          ********************************************/
-        try {
-            if (!this.filaterChain.applyFilters(request, response)) {
-                writeRsponseToClient(connector, client, response);
+        if (this.dispatcher.isRouteExist(request, response)) {
+
+            /********************************************
+             * Apply filters
+             ********************************************/
+            try {
+                if (!this.filaterChain.applyFilters(request, response)) {
+                    writeRsponseToClient(connector, client, response);
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
                 return;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
-            return;
-        }
 
-        /*************************************************************
-         * Dispatch the request to the appropriate handler/controller
-         *************************************************************/
-        try {
-            this.dispatcher.dispatch(request, response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
-            return;
+            /*************************************************************
+             * Dispatch the request to the appropriate handler/controller
+             *************************************************************/
+            try {
+                this.dispatcher.dispatch(request, response);
+            } catch (Exception e) {
+                e.printStackTrace();
+                connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+                return;
+            }
+
         }
 
         /*************************************************************

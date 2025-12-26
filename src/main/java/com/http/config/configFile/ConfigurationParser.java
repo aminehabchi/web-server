@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 import com.http.config.enums.HttpMethod;
+import com.http.config.enums.HttpStatus;
 
 public class ConfigurationParser {
 
@@ -133,6 +134,27 @@ public class ConfigurationParser {
                         }
                     }
                     route.setCgi(cgi);
+
+                    // Redirection
+                    String redirectStatusKey = "server." + serverId + ".route." + routeIndex + ".redirect.status";
+                    String redirectToKey = "server." + serverId + ".route." + routeIndex + ".redirect.to";
+
+                    if (props.containsKey(redirectStatusKey) && props.containsKey(redirectToKey)) {
+                        String statusStr = props.get(redirectStatusKey);
+                        HttpStatus status;
+
+                        try {
+                            // First try parsing as number (301, 302, etc.)
+                            int code = Integer.parseInt(statusStr);
+                            status = HttpStatus.fromCode(code);
+                        } catch (NumberFormatException e) {
+                            // If not a number, try parsing as reason string (e.g., "Found")
+                            status = HttpStatus.fromReason(statusStr);
+                        }
+
+                        route.setRedirection(props.get(redirectToKey));
+                        route.setRedirectionStatus(status);
+                    }
 
                     // 🔑 store by path
                     routes.put(routePath, route);

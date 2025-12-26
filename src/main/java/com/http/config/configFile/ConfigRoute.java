@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.http.config.enums.HttpMethod;
+import com.http.config.enums.HttpStatus;
 
 public class ConfigRoute {
 
@@ -13,6 +14,7 @@ public class ConfigRoute {
     private String path; // "/images", "/api"
     private List<HttpMethod> methods; // ["GET", "POST"]
     private String redirection; // "/new-path" or null
+    private HttpStatus redirectionStatus;
     private String root; // "/var/www/html"
     private String indexFile; // default file for directory
     private Map<String, String> cgi; // {".php": "/usr/bin/php"}
@@ -34,14 +36,6 @@ public class ConfigRoute {
 
     public void setMethods(List<HttpMethod> methods) {
         this.methods = methods;
-    }
-
-    public String getRedirection() {
-        return redirection;
-    }
-
-    public void setRedirection(String redirection) {
-        this.redirection = redirection;
     }
 
     public String getRoot() {
@@ -82,5 +76,21 @@ public class ConfigRoute {
 
     public void setDirectoryDefaultResponseFile(String directoryDefaultResponseFile) {
         this.directoryDefaultResponseFile = directoryDefaultResponseFile;
+    }
+
+    public String getRedirection() {
+        return redirection;
+    }
+
+    public void setRedirection(String redirection) {
+        this.redirection = redirection;
+    }
+
+    public HttpStatus getRedirectionStatus() {
+        return redirectionStatus;
+    }
+
+    public void setRedirectionStatus(HttpStatus status) {
+        this.redirectionStatus = status;
     }
 }

@@ -16,6 +16,18 @@ public class Dispatcher extends ArgumentResolvers {
         this.router = router;
     }
 
+    public boolean isRouteExist(HttpRequest request, HttpResponse response) {
+        Route route = this.router.getRoute(request.getMethod(), request.getUrl().getPath());
+        if (route == null) {
+            response.setStatus(HttpStatus.NOT_FOUND);
+            response.setBody("404 Not Found");
+            response.addHeader("Content-Type", "text/plain");
+            response.addHeader("Content-Length", "13");
+            return false;
+        }
+        return true;
+    }
+
     public void dispatch(HttpRequest request, HttpResponse response) {
         try {
             System.out.println(request.getUrl());

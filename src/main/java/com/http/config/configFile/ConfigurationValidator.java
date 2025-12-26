@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.http.config.enums.HttpMethod;
+import com.http.config.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 
@@ -48,7 +48,7 @@ public class ConfigurationValidator {
         }
     }
 
-    public boolean isValidRequest(HttpRequest request) {
+    public boolean isValidRequest(HttpRequest request, HttpResponse response) {
         try {
             // Check if port exists in configuration
             ConfigServer targetServer = null;
@@ -60,27 +60,40 @@ public class ConfigurationValidator {
             }
 
             if (targetServer == null) {
-                // Port not found
+                response.setStatus(HttpStatus.NOT_FOUND);
                 return false;
             }
 
-            // Optional: check Host header
+            // check Host header
             String hostHeader = request.getHeaders().getOrDefault("Host", "");
             if (!targetServer.getHosts().contains(hostHeader) && !targetServer.isDefault()) {
+                response.setStatus(HttpStatus.BAD_REQUEST);
+                response.setBody("Invalid Host header");
                 return false;
             }
 
             // Check body size
             if (request.getBody() != null && request.getBody().length() > targetServer.getClientMaxBodySize()) {
+                response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE);
+                response.setBody("Body too large then config");
                 return false;
             }
 
             // check Methots for path
             ConfigRoute route = targetServer.getRoute(request.getUrl().getPath());
             if (route != null && !route.getMethods().contains(request.getMethod())) {
+                response.setStatus(HttpStatus.METHOD_NOT_ALLOWED);
+                response.setBody("METHOD NOT ALLOWED");
                 return false;
             }
 
+            // check redirection
+            if (route != null && route.getRedirection() != null) {
+                response.setStatus(route.getRedirectionStatus());
+                response.getHeaders().put("Location", route.getRedirection());
+                return false;
+            }
+     
             return true;
         } catch (Exception e) {
             e.printStackTrace();
