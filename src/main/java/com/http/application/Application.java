@@ -26,7 +26,6 @@ public class Application {
         this.appContext = new ApplicationContext();
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
         this.filaterChain = new FilterChain(this.appContext.getFilterBeans());
-        this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
         this.connector = new Connector();
     }
 
@@ -43,6 +42,7 @@ public class Application {
     }
 
     public void handleClientRequest(Connector connector, SocketChannel client, byte[] requestData) {
+        System.out.println("handleClientRequest");
         /******************************************
          * Convert raw request data to a String
          ******************************************/
@@ -56,7 +56,7 @@ public class Application {
             request = RequestParser.parseRequest(result);
         } catch (Exception e) {
             e.printStackTrace();
-            connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+            connector.writeToClient(client, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n");
             return;
         }
         /******************************************

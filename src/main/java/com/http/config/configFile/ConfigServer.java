@@ -11,7 +11,7 @@ public class ConfigServer {
     private Map<Integer, String> errorPages; // custom error pages {404: "/errors/404.html"}
     private long clientMaxBodySize; // in bytes, e.g., 1048576
 
-    private List<ConfigRoute> routes;
+    private Map<String, ConfigRoute> routes;
 
     // Getters and Setters
     public List<String> getHosts() {
@@ -54,12 +54,33 @@ public class ConfigServer {
         this.clientMaxBodySize = clientMaxBodySize;
     }
 
-    public List<ConfigRoute> getRoutes() {
+    public Map<String, ConfigRoute> getRoutes() {
         return routes;
     }
 
-    public void setRoutes(List<ConfigRoute> routes) {
+    public void setRoutes(Map<String, ConfigRoute> routes) {
         this.routes = routes;
+    }
+
+    public ConfigRoute getRoute(String requestPath) {
+        ConfigRoute bestMatch = null;
+        int longestMatch = -1;
+
+        for (Map.Entry<String, ConfigRoute> entry : routes.entrySet()) {
+            String routePath = entry.getKey();
+
+            if (requestPath.equals(routePath) ||
+                    requestPath.startsWith(routePath + "/")) {
+
+                int length = routePath.length();
+                if (length > longestMatch) {
+                    longestMatch = length;
+                    bestMatch = entry.getValue();
+                }
+            }
+        }
+
+        return bestMatch;
     }
 
 }

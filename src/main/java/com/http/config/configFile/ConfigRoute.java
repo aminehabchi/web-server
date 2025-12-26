@@ -3,13 +3,15 @@ package com.http.config.configFile;
 import java.util.List;
 import java.util.Map;
 
+import com.http.config.enums.HttpMethod;
+
 public class ConfigRoute {
 
     public ConfigRoute() {
     }
 
     private String path; // "/images", "/api"
-    private List<String> methods; // ["GET", "POST"]
+    private List<HttpMethod> methods; // ["GET", "POST"]
     private String redirection; // "/new-path" or null
     private String root; // "/var/www/html"
     private String indexFile; // default file for directory
@@ -26,11 +28,11 @@ public class ConfigRoute {
         this.path = path;
     }
 
-    public List<String> getMethods() {
+    public List<HttpMethod> getMethods() {
         return methods;
     }
 
-    public void setMethods(List<String> methods) {
+    public void setMethods(List<HttpMethod> methods) {
         this.methods = methods;
     }
 

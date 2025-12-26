@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.http.config.enums.HttpMethod;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 
@@ -22,7 +23,7 @@ public class ConfigurationValidator {
     public ConfigurationValidator() {
         try {
             this.servers = ConfigurationParser
-                    .parse("/home/ahabchi/Desktop/JAVA-LOCALSERVER/src/main/resources/application.properties");
+                    .parse("./src/main/resources/application.properties");
         } catch (Exception e) {
             System.out.println("Error while parsing config file => " + e.getMessage());
             throw e;
@@ -74,15 +75,11 @@ public class ConfigurationValidator {
                 return false;
             }
 
-            // Optional: check route/method
-            // if (targetServer.getRoutes() != null) {
-            // boolean routeValid = targetServer.getRoutes().stream()
-            // .anyMatch(route -> route.getPath().equals(request.getUrl().getPath())
-            // && route.getMethods().contains(request.getMethod()));
-            // if (!routeValid) {
-            // return false;
-            // }
-            // }
+            // check Methots for path
+            ConfigRoute route = targetServer.getRoute(request.getUrl().getPath());
+            if (route != null && !route.getMethods().contains(request.getMethod())) {
+                return false;
+            }
 
             return true;
         } catch (Exception e) {
@@ -94,7 +91,6 @@ public class ConfigurationValidator {
     public void checkErrorPage(HttpRequest request, HttpResponse response) {
         ConfigServer targetServer = null;
 
-     
         // Find target server by port
         for (ConfigServer server : servers) {
             if (server.getPorts().contains(request.getPort())) {
@@ -116,7 +112,6 @@ public class ConfigurationValidator {
         }
 
         try {
-            // SOURCE should point to your resources root, e.g., "src/main/resources/"
             File file = new File(SOURCE + pagePath);
 
             if (!file.exists()) {
@@ -136,4 +131,5 @@ public class ConfigurationValidator {
         }
 
     }
+
 }
