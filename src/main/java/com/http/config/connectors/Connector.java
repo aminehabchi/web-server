@@ -45,7 +45,7 @@ public class Connector {
         // File tempFile = new File("tmp/uploads_" + System.currentTimeMillis() + "_" +
         // UUID.randomUUID());
         Path dir = Paths.get("tmp");
-        Path tmpFile = dir.resolve("tmp_upload_" + System.currentTimeMillis() + "_" + UUID.randomUUID());
+        Path tmpFile;
         boolean isGet = false;
         ByteBuffer readBuffer;
         byte[] headerBytes = new byte[MAX_HEADER_SIZE];
@@ -90,7 +90,16 @@ public class Connector {
             chunkBuffer = null;
             writeBuffer = null;
             writeState = 0;
-            isFileProcessing = false;
+            if (isFileProcessing == true) {
+                try {
+                    fileOutputStream.close();
+                } catch (Exception e) {
+                    if (DEBUG_LOG) {
+                        System.out.println("[DEBUG] " + e.getMessage());
+                    }
+                }
+                isFileProcessing = false;
+            }
             lastActivity = System.currentTimeMillis();
         }
 
@@ -108,6 +117,17 @@ public class Connector {
             lineBuilder.setLength(0);
             pendingCrlfHalf = false;
             chunkBuffer = null;
+            // if (isFileProcessing) {
+            //     isFileProcessing = false;
+            //     try {
+            //         // Files.delete(tmpFile);
+            //         fileOutputStream.close();
+            //     } catch (IOException e) {
+            //         if (DEBUG_LOG) {
+            //             System.out.println("[DEBUG] " + e.getMessage());
+            //         }
+            //     }
+            // }
         }
 
         void updateActivity() {
@@ -224,8 +244,24 @@ public class Connector {
                             System.out.println(
                                     "=== Processing Request ===\n" + new String(requestBytes, StandardCharsets.UTF_8));
                         }
-
-                        application.handleClientRequest(this, task.clientChannel, requestBytes);
+                        System.out.println();
+                        application.handleClientRequest(this, task.clientChannel, requestBytes/*
+                                                                                               * , ctx.isFileProcessing
+                                                                                               */); // here i will add a
+                                                                                                    // param that hold
+                                                                                                    // if the data will
+                                                                                                    // be read froma
+                                                                                                    // file
+                        if (ctx.isFileProcessing) {
+                            // try {
+                                // ctx.fileOutputStream.close();
+                            // Files.delete(ctx.tmpFile);
+                            // } catch (IOException e) {
+                            // if (DEBUG_LOG) {
+                            // System.out.println("[DEBUG] " + e.getMessage());
+                            // }
+                            // }
+                        }
                         ctx.writeState = 1;
                         task.selectionKey.interestOps(SelectionKey.OP_WRITE);
                         selector.wakeup();
@@ -331,7 +367,15 @@ public class Connector {
                         ctx.isFileProcessing = meta.isFileProcessing;
                         ctx.isGet = meta.isGet;
                         if (ctx.isFileProcessing && ctx.fileOutputStream == null) {
+                            if (ctx.contentLength > MAX_BODY_SIZE) {
+                                clientChannel.close();
+                                key.cancel();
+                                // 400 error
+                                return;
+                            }
                             Files.createDirectories(ctx.dir);
+                            ctx.tmpFile = ctx.dir
+                                    .resolve("tmp_upload_" + System.currentTimeMillis() + "_" + UUID.randomUUID());
                             ctx.fileOutputStream = new FileOutputStream(ctx.tmpFile.toFile());
                         }
                         if (DEBUG_LOG) {
@@ -362,6 +406,12 @@ public class Connector {
                             ctx.readBuffer.get(ctx.bodyBytes, ctx.bodyBytesReceived, bytesToRead);
                             ctx.bodyBytesReceived += bytesToRead;
                         } else if (ctx.isFileProcessing) {
+                            if (DEBUG_LOG) {
+                                System.out.println("[DEBUG] " + "it's a file processing");
+                            }
+                            if (ctx.contentLength > MAX_BODY_SIZE) {
+                                ctx.fileOutputStream.close();
+                            }
                             if (ctx.contentLength > 0 && ctx.bodyBytesReceived < ctx.contentLength) {
                                 int remainingBody = ctx.contentLength - ctx.bodyBytesReceived;
                                 int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
@@ -405,6 +455,7 @@ public class Connector {
                         }
                         byte[] headerCopy = Arrays.copyOf(ctx.headerBytes, ctx.headerEndIndex);
                         byte[] bodyCopy;
+                        // if (!ctx.isFileProcessing) {}
                         if (!ctx.chunked) {
                             bodyCopy = Objects.requireNonNullElseGet(ctx.bodyBytes, () -> new byte[0]);
                         } else {
@@ -505,11 +556,14 @@ public class Connector {
                     size = Integer.parseInt(sizeLine, 16);
                 } catch (NumberFormatException e) {
                     clientChannel.close();
+                    if (DEBUG_LOG) {
+                        System.err.println("[DEBUG] Closing connection: Invalid chunk format " + e.getMessage());
+                    }
                     // we need here a 400 responde
                     key.cancel();
                     return false;
                 }
-                if (size < 0 || size > MAX_BODY_RAM) {
+                if (size < 0 || size > MAX_BODY_SIZE) {
                     if (DEBUG_LOG) {
                         System.err.println("[DEBUG] Closing connection: Invalid chunk size " + size);
                     }
@@ -525,7 +579,7 @@ public class Connector {
                     ctx.chunkBuffer = new ByteArrayOutputStream();
                 }
 
-                if (ctx.chunkBuffer.size() + size > MAX_BODY_RAM) {
+                if (ctx.chunkBuffer.size() + size > MAX_BODY_SIZE) {
                     if (DEBUG_LOG) {
                         System.err.println("[DEBUG] Closing connection: Chunk buffer overflow");
                     }
@@ -555,7 +609,13 @@ public class Connector {
                 }
                 continue;
             }
-            if (ctx.currentChunkRead < ctx.currentChunkSize) {
+            if (ctx.chunkBuffer.size() > MAX_BODY_RAM && !ctx.isFileProcessing) {
+                ctx.isFileProcessing = true;
+                ctx.tmpFile = ctx.dir
+                        .resolve("tmp_upload_" + System.currentTimeMillis() + "_" + UUID.randomUUID());
+                ctx.fileOutputStream = new FileOutputStream(ctx.tmpFile.toString());
+            }
+            if (ctx.currentChunkRead < ctx.currentChunkSize && !ctx.isFileProcessing) {
                 int remainingBody = ctx.currentChunkSize - ctx.currentChunkRead;
                 int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
                 if (bytesToRead > 0) {
@@ -564,10 +624,19 @@ public class Connector {
                     ctx.chunkBuffer.write(temp);
                     ctx.currentChunkRead += bytesToRead;
                 }
-                if (ctx.currentChunkRead < ctx.currentChunkSize) {
-                    ctx.readBuffer.compact();
-                    return false;
+            } else if (ctx.currentChunkRead < ctx.currentChunkSize && ctx.isFileProcessing) {
+                int remainingBody = ctx.currentChunkSize - ctx.currentChunkRead;
+                int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
+                if (bytesToRead > 0) {
+                    byte[] temp = new byte[bytesToRead];
+                    ctx.readBuffer.get(temp);
+                    ctx.fileOutputStream.write(temp);
+                    ctx.currentChunkRead += bytesToRead;
                 }
+            }
+            if (ctx.currentChunkRead < ctx.currentChunkSize) {
+                ctx.readBuffer.compact();
+                return false;
             }
             if (!consumeChunkCrlf(ctx, clientChannel, key)) {
                 return false;
@@ -709,15 +778,14 @@ public class Connector {
         }
     }
 
-    public void writeToClient(SocketChannel client, String msg) {
+    public void writeToClient(SocketChannel client, byte[] msg) {
         try {
             for (SelectionKey key : selector.keys()) {
                 if (key.channel() == client && key.isValid()) {
                     ConnectionContext ctx = (ConnectionContext) key.attachment();
                     if (ctx != null) {
-                        ctx.writeBuffer = ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8));
+                        ctx.writeBuffer = ByteBuffer.wrap(msg);
                         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-
                         selector.wakeup();
                     }
                     break;
