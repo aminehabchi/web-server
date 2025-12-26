@@ -3,7 +3,8 @@ package com.http.http.request;
 import com.http.config.enums.HttpMethod;
 import com.http.config.url.Url;
 
-import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 enum Level {
     LEVEL_START,
@@ -13,11 +14,12 @@ enum Level {
 
 public class RequestParser {
 
-    public static HttpRequest parseRequest(String rawRequest) {
+    private static final Pattern HOST_PORT_PATTERN = Pattern.compile("^(.*?)(:(\\d+))?$");
+
+    public static HttpRequest parseRequest(String rawRequest) throws Exception {
         String[] lines = rawRequest.split("\r\n");
         Level level = Level.LEVEL_START;
         HttpRequest httpRequest = new HttpRequest();
-
         StringBuilder bodyBuilder = new StringBuilder();
 
         for (String line : lines) {
@@ -25,64 +27,72 @@ public class RequestParser {
                 case LEVEL_START -> {
                     // Parse request line: METHOD URL HTTP/VERSION
                     String[] startLineItems = line.split(" ");
-                    if (startLineItems.length != 3) return null;
+                    if (startLineItems.length != 3)
+                        throw new Exception("Malformed request line");
 
-                    httpRequest.setMethod(HttpMethod.fromReason(startLineItems[0]));
-                    httpRequest.setUrl(new Url(startLineItems[1]));
+                    HttpMethod method = HttpMethod.fromReason(startLineItems[0]);
+                    if (method == null)
+                        throw new Exception("Unsupported HTTP method");
+
+                    httpRequest.setMethod(method);
+
+                    try {
+                        httpRequest.setUrl(new Url(startLineItems[1]));
+                    } catch (Exception e) {
+                        throw new Exception("Invalid URL");
+                    }
+
                     httpRequest.setHttpVersion(startLineItems[2]);
-
                     level = Level.LEVEL_HEADER;
                 }
 
                 case LEVEL_HEADER -> {
                     if (line.isEmpty()) {
-                        // Empty line means body starts next
                         level = Level.LEVEL_BODY;
                         continue;
                     }
 
                     String[] headerParts = line.split(":", 2);
-                    if (headerParts.length < 2) continue;
+                    if (headerParts.length < 2)
+                        throw new Exception("Malformed header: " + line);
 
                     String key = headerParts[0].trim();
                     String value = headerParts[1].trim();
 
-                    // Special case: Host header may include port
-                    if (key.equalsIgnoreCase("Host") && value.contains(":")) {
-                        String[] hostParts = value.split(":");
-                        value = hostParts[0];
-                        httpRequest.setPort(Integer.parseInt(hostParts[1]));
-                    }
+                    if (key.equalsIgnoreCase("Host") && value.isEmpty())
+                        throw new Exception("Missing Host header");
 
                     httpRequest.getHeaders().put(key, value);
 
-                    // Parse cookies if header is Cookie
-                    if (key.equalsIgnoreCase("Cookie")) {
-                        Arrays.stream(value.split(";"))
-                                .map(String::trim)
-                                .map(s -> s.split("=", 2))
-                                .forEach(pair -> {
-                                    if (pair.length == 2)
-                                        httpRequest.getCookies().put(pair[0], pair[1]);
-                                });
-                    }
-
-                    // Parse Authorization header
-                    if (key.equalsIgnoreCase("Authorization")) {
-                        httpRequest.setAuthorization(value);
+                    // Parse host and optional port
+                    if (key.equalsIgnoreCase("Host")) {
+                        Matcher matcher = HOST_PORT_PATTERN.matcher(value);
+                        if (matcher.matches()) {
+                            httpRequest.setHost(matcher.group(1));
+                            if (matcher.group(3) != null) {
+                                try {
+                                    httpRequest.setPort(Integer.parseInt(matcher.group(3)));
+                                } catch (NumberFormatException e) {
+                                    throw new Exception("Invalid port in Host header");
+                                }
+                            } else {
+                                httpRequest.setPort(80); // default HTTP port
+                            }
+                        } else {
+                            throw new Exception("Malformed Host header");
+                        }
                     }
                 }
 
-                case LEVEL_BODY -> {
-                    bodyBuilder.append(line).append("\n");
-                }
+                case LEVEL_BODY -> bodyBuilder.append(line).append("\n");
             }
         }
 
-        // Set body if present
-        if (bodyBuilder.length() > 0) {
+        if (bodyBuilder.length() > 0)
             httpRequest.setBody(bodyBuilder.toString().trim());
-        }
+
+        if (!httpRequest.getHeaders().containsKey("Host"))
+            throw new Exception("Missing Host header");
 
         return httpRequest;
     }

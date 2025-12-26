@@ -1,5 +1,6 @@
 package com.http.http.response;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,15 +15,16 @@ public class HttpResponse {
     private HttpStatus status;
     private Map<String, String> headers = new HashMap<>();
     private List<Cookie> cookies = new ArrayList<>();
-    private String body;
+    private byte[] body;
 
     public HttpResponse() {
         this.version = "HTTP/1.1";
         this.status = HttpStatus.OK; // default 200 OK
-        this.body = "";
+        this.body = new byte[0];
+
     }
 
-    public HttpResponse(HttpStatus status, String body) {
+    public HttpResponse(HttpStatus status, byte[] body) {
         this.version = "HTTP/1.1";
         this.status = status;
         this.body = body;
@@ -55,7 +57,7 @@ public class HttpResponse {
         return cookies;
     }
 
-    public String getBody() {
+    public byte[] getBody() {
         return body;
     }
 
@@ -68,46 +70,52 @@ public class HttpResponse {
         this.status = status;
     }
 
-    public void setBody(String body) {
+    public void setBody(byte[] body) {
         this.body = body;
     }
 
-    // Convert to raw HTTP response string
-    @Override
-    public String toString() {
+    public byte[] toBytes() {
         StringBuilder sb = new StringBuilder();
 
+        // Status line
         sb.append(version).append(" ").append(status.getCode())
                 .append(" ").append(status.getReason()).append("\r\n");
 
-        // Add headers
+        // Headers
         for (Map.Entry<String, String> header : headers.entrySet()) {
             sb.append(header.getKey()).append(": ").append(header.getValue()).append("\r\n");
         }
 
-        // Add cookies as Set-Cookie headers
+        // Cookies
         for (Cookie cookie : cookies) {
             sb.append("Set-Cookie: ").append(cookie.toString()).append("\r\n");
         }
 
         sb.append("\r\n"); // blank line before body
 
-        if (body != null) {
-            sb.append(body);
+        // Convert headers to bytes
+        byte[] headerBytes = sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        if (body == null || body.length == 0) {
+            return headerBytes;
         }
 
-        return sb.toString();
+        // Combine header + body
+        byte[] fullResponse = new byte[headerBytes.length + body.length];
+        System.arraycopy(headerBytes, 0, fullResponse, 0, headerBytes.length);
+        System.arraycopy(body, 0, fullResponse, headerBytes.length, body.length);
+
+        return fullResponse;
     }
 
     public static HttpResponse defaultResponse() {
         HttpResponse response = new HttpResponse();
         response.setStatus(HttpStatus.OK);
         response.setVersion("HTTP/1.1");
-        response.setBody("");
+        response.setBody(new byte[0]);
 
         // default headers
         response.addHeader("Content-Type", "text/html");
-
 
         return response;
     }

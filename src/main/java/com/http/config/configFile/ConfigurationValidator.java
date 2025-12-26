@@ -1,14 +1,12 @@
 package com.http.config.configFile;
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.http.config.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
+import com.http.utils.Utils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -22,8 +20,7 @@ public class ConfigurationValidator {
 
     public ConfigurationValidator() {
         try {
-            this.servers = ConfigurationParser
-                    .parse("./src/main/resources/application.properties");
+            this.servers = ConfigurationParser.parse("./src/main/resources/application.properties");
         } catch (Exception e) {
             System.out.println("Error while parsing config file => " + e.getMessage());
             throw e;
@@ -65,17 +62,17 @@ public class ConfigurationValidator {
             }
 
             // check Host header
-            String hostHeader = request.getHeaders().getOrDefault("Host", "");
+            String hostHeader = request.getHost();
             if (!targetServer.getHosts().contains(hostHeader) && !targetServer.isDefault()) {
                 response.setStatus(HttpStatus.BAD_REQUEST);
-                response.setBody("Invalid Host header");
+                response.setBody(("Invalid Host header " + hostHeader).getBytes());
                 return false;
             }
 
             // Check body size
             if (request.getBody() != null && request.getBody().length() > targetServer.getClientMaxBodySize()) {
                 response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE);
-                response.setBody("Body too large then config");
+                response.setBody("Body too large then config".getBytes());
                 return false;
             }
 
@@ -83,7 +80,7 @@ public class ConfigurationValidator {
             ConfigRoute route = targetServer.getRoute(request.getUrl().getPath());
             if (route != null && !route.getMethods().contains(request.getMethod())) {
                 response.setStatus(HttpStatus.METHOD_NOT_ALLOWED);
-                response.setBody("METHOD NOT ALLOWED");
+                response.setBody("METHOD NOT ALLOWED".getBytes());
                 return false;
             }
 
@@ -91,14 +88,62 @@ public class ConfigurationValidator {
             if (route != null && route.getRedirection() != null) {
                 response.setStatus(route.getRedirectionStatus());
                 response.getHeaders().put("Location", route.getRedirection());
+                response.setBody(new byte[0]);
                 return false;
             }
-     
+
+            if (!StaticResourceResolver(request, response, route)) {
+                return false;
+            }
+
             return true;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public boolean StaticResourceResolver(HttpRequest request, HttpResponse response, ConfigRoute route) {
+        if (route == null || route.getRoot() == null) {
+            return true;
+        }
+
+        String currentPath = request.getUrl().getPath();
+        String basePath = route.getPath();
+
+        // If the requested path matches the route base
+        if (currentPath.equals(basePath)) {
+            if (route.isDirectoryListing()) {
+                // Serve directory listing
+                Utils.serveDirectoryListing(response, SOURCE + route.getRoot(), basePath);
+            } else if (route.getIndexFile() != null) {
+                // Serve index file
+                String indexPath = SOURCE + route.getRoot() + "/" + route.getIndexFile();
+                Utils.serveFile(response, indexPath);
+            } else {
+                // Directory listing not allowed
+                response.setStatus(HttpStatus.FORBIDDEN);
+                response.setBody("You are not allowed to list this directory".getBytes());
+            }
+            return false;
+        }
+
+        // Handle files under the route
+        String fileName = currentPath.substring(basePath.length());
+        String filePath = SOURCE + route.getRoot() + fileName;
+
+        if (!Utils.serveFile(response, filePath)) {
+            // Fallback to index file if exists
+            if (route.getIndexFile() != null) {
+                Utils.serveFile(response, SOURCE + route.getRoot() + "/" + route.getIndexFile());
+            } else {
+                response.setStatus(HttpStatus.NOT_FOUND);
+                response.setBody(("File " + fileName + " : Not found").getBytes());
+            }
+            return false;
+        }
+
+        return false;
     }
 
     public void checkErrorPage(HttpRequest request, HttpResponse response) {
@@ -117,7 +162,6 @@ public class ConfigurationValidator {
         }
 
         int statusCode = response.getStatus().getCode();
-
         // Find matching error page
         String pagePath = targetServer.getErrorPages().get(statusCode);
         if (pagePath == null) {
@@ -125,24 +169,10 @@ public class ConfigurationValidator {
         }
 
         try {
-            File file = new File(SOURCE + pagePath);
-
-            if (!file.exists()) {
-                System.err.println("Error page file not found: " + SOURCE + pagePath);
-                return;
-            }
-
-            // Read the file fully
-            String html = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-
-            // Set response
-            response.addHeader("Content-Type", "text/html");
-            response.setBody(html);
-
+            Utils.serveFile(response, SOURCE + pagePath);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
 }

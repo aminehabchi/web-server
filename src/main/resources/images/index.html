@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Image Gallery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .gallery img {
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+            background: white;
+            padding: 5px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Image Gallery</h1>
+
+    <div class="gallery">
+        <img src="http://localhost:8888/myimages/1.jpeg" alt="Image 1">
+        <img src="http://localhost:8888/myimages/2.jpeg" alt="Image 2">
+        <img src="http://localhost:8888/myimages/3.jpeg" alt="Image 3">
+        <img src="http://localhost:8888/myimages/4.jpeg" alt="Image 4">
+        <img src="http://localhost:8888/myimages/5.jpeg" alt="Image 5">
+        <img src="http://localhost:8888/myimages/6.jpeg" alt="Image 6">
+    </div>
+
+</body>
+
+</html>

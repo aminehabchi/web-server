@@ -9,6 +9,7 @@ import com.http.application.filters.FilterChain;
 import com.http.application.routing.Router;
 import com.http.config.configFile.ConfigurationValidator;
 import com.http.config.connectors.Connector;
+import com.http.config.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
 import com.http.http.request.RequestParser;
 
@@ -42,11 +43,18 @@ public class Application {
     }
 
     public void handleClientRequest(Connector connector, SocketChannel client, byte[] requestData) {
+        System.out.println();
+        System.out.println();
         System.out.println("handleClientRequest");
         /******************************************
          * Convert raw request data to a String
          ******************************************/
         String result = new String(requestData, StandardCharsets.UTF_8);
+
+        /******************************************
+         * Create a default HTTP response object
+         ******************************************/
+        HttpResponse response = HttpResponse.defaultResponse();
 
         /******************************************
          * Parse the HTTP request
@@ -55,14 +63,11 @@ public class Application {
         try {
             request = RequestParser.parseRequest(result);
         } catch (Exception e) {
-            e.printStackTrace();
-            connector.writeToClient(client, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n");
+            response.setStatus(HttpStatus.BAD_REQUEST);
+            response.setBody(e.getMessage().getBytes());
+            writeRsponseToClient(connector, client, response);
             return;
         }
-        /******************************************
-         * Create a default HTTP response object
-         ******************************************/
-        HttpResponse response = HttpResponse.defaultResponse();
 
         /********************************************
          * Check if request is valid based on config
@@ -76,7 +81,6 @@ public class Application {
          * Check if path exist in handler
          ********************************************/
         if (this.dispatcher.isRouteExist(request, response)) {
-
             /********************************************
              * Apply filters
              ********************************************/
@@ -86,8 +90,9 @@ public class Application {
                     return;
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+                response.setStatus(HttpStatus.FORBIDDEN);
+                response.setBody("Error in filter".getBytes());
+                writeRsponseToClient(connector, client, response);
                 return;
             }
 
@@ -97,8 +102,9 @@ public class Application {
             try {
                 this.dispatcher.dispatch(request, response);
             } catch (Exception e) {
-                e.printStackTrace();
-                connector.writeToClient(client, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+                response.setBody(e.getMessage().getBytes());
+                writeRsponseToClient(connector, client, response);
                 return;
             }
 
@@ -116,8 +122,11 @@ public class Application {
     }
 
     private void writeRsponseToClient(Connector connector, SocketChannel client, HttpResponse response) {
-        response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
-        String res = response.toString();
+        if (response.getHeaders().get("Content-Length") != null) {
+            response.addHeader("Content-Length", String.valueOf(response.getBody().length));
+        }
+
+        byte[] res = response.toBytes();
         connector.writeToClient(client, res);
     }
 }

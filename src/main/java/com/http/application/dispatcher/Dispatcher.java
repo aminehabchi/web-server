@@ -20,9 +20,7 @@ public class Dispatcher extends ArgumentResolvers {
         Route route = this.router.getRoute(request.getMethod(), request.getUrl().getPath());
         if (route == null) {
             response.setStatus(HttpStatus.NOT_FOUND);
-            response.setBody("404 Not Found");
-            response.addHeader("Content-Type", "text/plain");
-            response.addHeader("Content-Length", "13");
+            response.setBody("404 Not Found".getBytes());
             return false;
         }
         return true;
@@ -35,7 +33,7 @@ public class Dispatcher extends ArgumentResolvers {
             Route route = this.router.getRoute(request.getMethod(), request.getUrl().getPath());
             if (route == null) {
                 response.setStatus(HttpStatus.NOT_FOUND);
-                response.setBody("404 Not Found");
+                response.setBody("404 Not Found".getBytes());
                 response.addHeader("Content-Type", "text/plain");
                 response.addHeader("Content-Length", "13");
                 return;
@@ -48,9 +46,9 @@ public class Dispatcher extends ArgumentResolvers {
                 args = resolveArguments(handlerMethod, request, response);
             } catch (IllegalArgumentException e) {
                 response.setStatus(HttpStatus.BAD_REQUEST);
-                response.setBody("400 Bad Request: " + e.getMessage());
+                response.setBody(("400 Bad Request: " + e.getMessage()).getBytes());
                 response.addHeader("Content-Type", "text/plain");
-                response.addHeader("Content-Length", String.valueOf(response.getBody().length()));
+                response.addHeader("Content-Length", String.valueOf(response.getBody().length));
                 return;
             }
 
@@ -76,7 +74,7 @@ public class Dispatcher extends ArgumentResolvers {
 
         // 2. If null or void → empty response
         if (result == null) {
-            response.setBody("");
+            response.setBody("".getBytes());
             response.addHeader("Content-Type", "text/plain");
             response.addHeader("Content-Length", "0");
             return;
@@ -84,7 +82,7 @@ public class Dispatcher extends ArgumentResolvers {
 
         // 3. If String → send as HTML
         if (result instanceof String str) {
-            response.setBody(str);
+            response.setBody(str.getBytes());
             response.addHeader("Content-Type", "text/html");
             response.addHeader("Content-Length", String.valueOf(str.length()));
             return;
@@ -93,7 +91,7 @@ public class Dispatcher extends ArgumentResolvers {
         // 4. If Number → send as text/plain
         if (result instanceof Number num) {
             String body = num.toString();
-            response.setBody(body);
+            response.setBody(body.getBytes());
             response.addHeader("Content-Type", "text/plain");
             response.addHeader("Content-Length", String.valueOf(body.length()));
             return;
@@ -101,7 +99,7 @@ public class Dispatcher extends ArgumentResolvers {
 
         // 5. Otherwise → convert object to JSON
         String json = JSON.toJson(result);
-        response.setBody(json);
+        response.setBody(json.getBytes());
         response.addHeader("Content-Type", "application/json");
         response.addHeader("Content-Length", String.valueOf(json.length()));
     }

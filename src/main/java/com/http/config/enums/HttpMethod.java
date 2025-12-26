@@ -13,8 +13,6 @@ public enum HttpMethod {
         try {
             return HttpMethod.valueOf(reason.toUpperCase().trim());
         } catch (IllegalArgumentException e) {
-            // Method not found in enum
-            System.err.println("Invalid HTTP method: " + reason);
             return null;
         }
     }

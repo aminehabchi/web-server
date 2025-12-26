@@ -676,13 +676,13 @@ public class Connector {
         }
     }
 
-    public void writeToClient(SocketChannel client, String msg) {
+    public void writeToClient(SocketChannel client, byte[] msg) {
         try {
             for (SelectionKey key : selector.keys()) {
                 if (key.channel() == client && key.isValid()) {
                     ConnectionContext ctx = (ConnectionContext) key.attachment();
                     if (ctx != null) {
-                        ctx.writeBuffer = ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8));
+                        ctx.writeBuffer = ByteBuffer.wrap(msg);
                         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 
                         selector.wakeup();
