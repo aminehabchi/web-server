@@ -28,8 +28,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class Connector {
     private static final int MAX_HEADER_SIZE = 16 * 1024;
     private static final int MAX_QUEUE_SIZE = 1024;
-    private static final int MAX_BODY_SIZE = 5 * 1024 * 1024;
-    private static final int MAX_BODY_RAM = 32;
+    private static final int MAX_BODY_SIZE = 50 * 1024 * 1024;
+    private static final int MAX_BODY_RAM = 10 * 1024;
     private static final int MAX_CHUNK_LINE = 2048;
     private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
     private static final boolean DEBUG_LOG = true;
@@ -93,6 +93,7 @@ public class Connector {
             if (isFileProcessing == true) {
                 try {
                     fileOutputStream.close();
+                    Files.delete(tmpFile);
                 } catch (Exception e) {
                     if (DEBUG_LOG) {
                         System.out.println("[DEBUG] " + e.getMessage());
@@ -117,17 +118,18 @@ public class Connector {
             lineBuilder.setLength(0);
             pendingCrlfHalf = false;
             chunkBuffer = null;
-            // if (isFileProcessing) {
-            //     isFileProcessing = false;
-            //     try {
-            //         // Files.delete(tmpFile);
-            //         fileOutputStream.close();
-            //     } catch (IOException e) {
-            //         if (DEBUG_LOG) {
-            //             System.out.println("[DEBUG] " + e.getMessage());
-            //         }
-            //     }
-            // }
+            if (isFileProcessing) {
+                isFileProcessing = false;
+                try {
+                    if (fileOutputStream != null) {
+                        fileOutputStream.close();
+                    }
+                } catch (IOException e) {
+                    if (DEBUG_LOG) {
+                        System.out.println("[DEBUG] " + e.getMessage());
+                    }
+                }
+            }
         }
 
         void updateActivity() {
@@ -145,14 +147,28 @@ public class Connector {
         int headerLength;
         byte[] bodyBytes;
         SelectionKey selectionKey;
+        boolean isFileProcessing = false;
+        Path tmpFile;
+
+        // RequestTask(SocketChannel clientChannel, byte[] headerBytes, int
+        // headerLength, byte[] bodyBytes,
+        // SelectionKey selectionKey) {
+        // this.clientChannel = clientChannel;
+        // this.headerBytes = headerBytes;
+        // this.headerLength = headerLength;
+        // this.bodyBytes = bodyBytes;
+        // this.selectionKey = selectionKey;
+        // }
 
         RequestTask(SocketChannel clientChannel, byte[] headerBytes, int headerLength, byte[] bodyBytes,
-                SelectionKey selectionKey) {
+                SelectionKey selectionKey, boolean isFileProcessing, Path tmpFile) {
             this.clientChannel = clientChannel;
             this.headerBytes = headerBytes;
             this.headerLength = headerLength;
             this.bodyBytes = bodyBytes;
             this.selectionKey = selectionKey;
+            this.isFileProcessing = isFileProcessing;
+            this.tmpFile = tmpFile;
         }
     }
 
@@ -252,15 +268,29 @@ public class Connector {
                                                                                                     // if the data will
                                                                                                     // be read froma
                                                                                                     // file
-                        if (ctx.isFileProcessing) {
-                            // try {
-                                // ctx.fileOutputStream.close();
-                            // Files.delete(ctx.tmpFile);
-                            // } catch (IOException e) {
-                            // if (DEBUG_LOG) {
-                            // System.out.println("[DEBUG] " + e.getMessage());
-                            // }
-                            // }
+                        // System.out.println("====================================== " +
+                        // ctx.isFileProcessing);
+                        if (task.isFileProcessing) {
+                            //
+                            try {
+                                if (ctx.fileOutputStream != null) {
+                                    ctx.fileOutputStream.close();
+                                }
+                            } catch (IOException e) {
+                                if (DEBUG_LOG) {
+                                    System.out.println("[DEBUG] Line 336 " + e.getMessage());
+                                }
+                            }
+                            try {
+                                if (ctx.tmpFile != null) {
+                                    Files.delete(ctx.tmpFile);
+                                }
+                            } catch (IOException e) {
+                                System.out.println("[DEBUG] Line 344 " + e.getMessage());
+                            }
+                            ctx.tmpFile = null;
+                            ctx.fileOutputStream = null;
+                            ctx.isFileProcessing = false;
                         }
                         ctx.writeState = 1;
                         task.selectionKey.interestOps(SelectionKey.OP_WRITE);
@@ -311,6 +341,27 @@ public class Connector {
             if (bytesRead == -1) {
                 if (DEBUG_LOG) {
                     System.out.println("[DEBUG] Closing connection: Client sent EOF");
+                }
+                if (ctx.isFileProcessing) {
+                    try {
+                        if (ctx.fileOutputStream != null) {
+                            ctx.fileOutputStream.close();
+                        }
+                    } catch (IOException e) {
+                        if (DEBUG_LOG) {
+                            System.out.println("[DEBUG] Line 336 " + e.getMessage());
+                        }
+                    }
+                    try {
+                        if (ctx.tmpFile != null) {
+                            Files.delete(ctx.tmpFile);
+                        }
+                    } catch (IOException e) {
+                        System.out.println("[DEBUG] Line 344 " + e.getMessage());
+                    }
+                    ctx.tmpFile = null;
+                    ctx.fileOutputStream = null;
+                    ctx.isFileProcessing = false;
                 }
                 clientChannel.close();
                 key.cancel();
@@ -428,8 +479,8 @@ public class Connector {
                                     System.out.println("[DEBUG] ctx.contentLength " + ctx.contentLength);
                                     System.out.println("[DEBUG] ctx.bodyBytesReceived " + ctx.bodyBytesReceived);
                                 }
-                                ctx.fileOutputStream.close();
-                                ctx.fileOutputStream = null;
+                                // ctx.fileOutputStream.close();
+                                // ctx.fileOutputStream = null;
                                 // Files.delete(ctx.tmpFile);
                             }
                         }
@@ -462,7 +513,8 @@ public class Connector {
                             bodyCopy = ctx.chunkBuffer != null ? ctx.chunkBuffer.toByteArray() : new byte[0];
                         }
                         globalRequestQueue
-                                .offer(new RequestTask(clientChannel, headerCopy, ctx.headerEndIndex, bodyCopy, key));
+                                .offer(new RequestTask(clientChannel, headerCopy, ctx.headerEndIndex, bodyCopy,
+                                        key, ctx.isFileProcessing, ctx.tmpFile));
                         key.interestOps(0);
                         ctx.prepareForNextRequest();
                     }
