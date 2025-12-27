@@ -1,7 +1,9 @@
 package com.http.config.configFile;
 
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.http.config.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
@@ -92,6 +94,11 @@ public class ConfigurationValidator {
                 return false;
             }
 
+            // handle CGI
+            if (!cgiHandler(request, response, route)) {
+                return false;
+            }
+
             if (!StaticResourceResolver(request, response, route)) {
                 return false;
             }
@@ -101,6 +108,82 @@ public class ConfigurationValidator {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public boolean cgiHandler(HttpRequest request, HttpResponse response, ConfigRoute route) {
+        if (route == null || route.getCgi() == null) {
+            return true;
+        }
+        String currentPath = request.getUrl().getPath();
+        String basePath = route.getPath();
+        String cgiName = currentPath.substring(basePath.length());
+        String[] ext = cgiName.split("\\.");
+
+        if (ext == null || ext.length != 2) {
+            response.setStatus(HttpStatus.BAD_REQUEST);
+            response.setBody("Error : CGI file name".getBytes());
+            return false;
+        }
+        String interpreter = route.getCgi().get(ext[1]);
+        String cgiPath;
+        if (route.getRoot() != null) {
+            cgiPath = SOURCE + route.getRoot() + cgiName;
+        } else {
+            cgiPath = SOURCE + route.getRoot() + cgiName;
+        }
+
+        try {
+            ProcessBuilder pb;
+            if (interpreter != null) {
+                pb = new ProcessBuilder(interpreter, cgiPath);
+            } else {
+                pb = new ProcessBuilder(cgiPath);
+            }
+
+            // Set environment variables
+            Map<String, String> env = pb.environment();
+            env.put("REQUEST_METHOD", request.getMethod().name());
+            env.put("QUERY_STRING",
+                    request.getUrl().getQueryParams() != null ? request.getUrl().getQueryParams().toString() : "");
+            if (request.getBody() != null) {
+                env.put("CONTENT_LENGTH", String.valueOf(request.getBody().length()));
+            }
+
+            env.put("CONTENT_TYPE", request.getHeader("Content-Type") != null ? request.getHeader("Content-Type") : "");
+            env.put("SCRIPT_FILENAME", cgiPath);
+            env.put("SCRIPT_NAME", cgiName);
+            env.put("SERVER_NAME", request.getHost());
+            env.put("SERVER_PORT", String.valueOf(request.getPort()));
+
+            pb.redirectErrorStream(true); // combine stdout and stderr
+            Process process = pb.start();
+
+            // Write POST body if needed
+            if ("POST".equalsIgnoreCase(request.getMethod().name()) && request.getBody() != null
+                    && request.getBody().length() > 0) {
+                try (OutputStream os = process.getOutputStream()) {
+                    if (request.getBody() != null) {
+                        os.write(request.getBody().getBytes()); // write actual body bytes
+                        os.flush();
+                    }
+                }
+            }
+
+            // Read CGI output (just the body)
+            byte[] output = process.getInputStream().readAllBytes();
+            process.waitFor();
+
+            // Set the response body only
+            response.setBody(output);
+
+            return false;
+
+        } catch (Exception e) {
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+            response.setBody(("CGI execution error: " + e.getMessage()).getBytes());
+        }
+
+        return false;
     }
 
     public boolean StaticResourceResolver(HttpRequest request, HttpResponse response, ConfigRoute route) {

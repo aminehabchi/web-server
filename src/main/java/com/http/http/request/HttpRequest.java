@@ -27,4 +27,7 @@ public class HttpRequest {
 
     private String Body;
 
+    public String getHeader(String key) {
+        return headers.get(key);
+    }
 }

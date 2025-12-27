@@ -31,7 +31,6 @@ public class Application {
     }
 
     // ---------------- Connecters ----------------
-
     public void start() throws Exception {
         connector.setApplication(this);
         connector.setPorts(this.configurationValidator.getPorts());
