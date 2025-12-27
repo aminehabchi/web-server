@@ -10,6 +10,7 @@ import com.http.application.routing.Router;
 import com.http.config.configFile.ConfigurationValidator;
 import com.http.config.connectors.Connector;
 import com.http.config.enums.HttpStatus;
+import com.http.config.session.SessionManager;
 import com.http.http.request.HttpRequest;
 import com.http.http.request.RequestParser;
 
@@ -21,12 +22,14 @@ public class Application {
     private Dispatcher dispatcher;
     private ApplicationContext appContext;
     private FilterChain filaterChain;
+    private SessionManager sessionManager;
 
     public Application() {
         this.configurationValidator = new ConfigurationValidator();
         this.appContext = new ApplicationContext();
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
         this.filaterChain = new FilterChain(this.appContext.getFilterBeans());
+        this.sessionManager = new SessionManager();
         this.connector = new Connector();
     }
 
@@ -64,7 +67,7 @@ public class Application {
         } catch (Exception e) {
             response.setStatus(HttpStatus.BAD_REQUEST);
             response.setBody(e.getMessage().getBytes());
-            writeRsponseToClient(connector, client, response);
+            writeRsponseToClient(connector, client, request, response);
             return;
         }
 
@@ -72,7 +75,7 @@ public class Application {
          * Check if request is valid based on config
          ********************************************/
         if (!configurationValidator.isValidRequest(request, response)) {
-            writeRsponseToClient(connector, client, response);
+            writeRsponseToClient(connector, client, request, response);
             return;
         }
 
@@ -85,13 +88,13 @@ public class Application {
              ********************************************/
             try {
                 if (!this.filaterChain.applyFilters(request, response)) {
-                    writeRsponseToClient(connector, client, response);
+                    writeRsponseToClient(connector, client, request, response);
                     return;
                 }
             } catch (Exception e) {
                 response.setStatus(HttpStatus.FORBIDDEN);
                 response.setBody("Error in filter".getBytes());
-                writeRsponseToClient(connector, client, response);
+                writeRsponseToClient(connector, client, request, response);
                 return;
             }
 
@@ -103,7 +106,7 @@ public class Application {
             } catch (Exception e) {
                 response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
                 response.setBody(e.getMessage().getBytes());
-                writeRsponseToClient(connector, client, response);
+                writeRsponseToClient(connector, client, request, response);
                 return;
             }
 
@@ -117,10 +120,14 @@ public class Application {
         /*************************************************************
          * Send the final response back to the client
          *************************************************************/
-        writeRsponseToClient(connector, client, response);
+        writeRsponseToClient(connector, client, request, response);
     }
 
-    private void writeRsponseToClient(Connector connector, SocketChannel client, HttpResponse response) {
+    private void writeRsponseToClient(Connector connector, SocketChannel client, HttpRequest request,
+            HttpResponse response) {
+                
+        sessionManager.applySession(request, response);
+
         if (response.getHeaders().get("Content-Length") != null) {
             response.addHeader("Content-Length", String.valueOf(response.getBody().length));
         }

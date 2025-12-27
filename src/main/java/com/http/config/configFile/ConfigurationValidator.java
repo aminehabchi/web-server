@@ -111,9 +111,11 @@ public class ConfigurationValidator {
     }
 
     public boolean cgiHandler(HttpRequest request, HttpResponse response, ConfigRoute route) {
-        if (route == null || route.getCgi() == null) {
+        if (route == null || route.getCgi() == null || route.getCgi().size()==0) {
             return true;
         }
+
+
         String currentPath = request.getUrl().getPath();
         String basePath = route.getPath();
         String cgiName = currentPath.substring(basePath.length());
