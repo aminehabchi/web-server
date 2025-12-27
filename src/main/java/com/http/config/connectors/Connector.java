@@ -67,6 +67,7 @@ public class Connector {
         int writeState = 0;
         boolean isFileProcessing = false;
         FileOutputStream fileOutputStream;
+        long totalBodyBytes = 0;
 
         ConnectionContext() {
             this.readBuffer = ByteBuffer.allocate(8192);
@@ -93,7 +94,7 @@ public class Connector {
             if (isFileProcessing == true) {
                 try {
                     fileOutputStream.close();
-                    Files.delete(tmpFile);
+                    // Files.delete(tmpFile);
                 } catch (Exception e) {
                     if (DEBUG_LOG) {
                         System.out.println("[DEBUG] " + e.getMessage());
@@ -101,6 +102,7 @@ public class Connector {
                 }
                 isFileProcessing = false;
             }
+            totalBodyBytes = 0;
             lastActivity = System.currentTimeMillis();
         }
 
@@ -118,6 +120,7 @@ public class Connector {
             lineBuilder.setLength(0);
             pendingCrlfHalf = false;
             chunkBuffer = null;
+            totalBodyBytes = 0;
             if (isFileProcessing) {
                 isFileProcessing = false;
                 try {
@@ -372,6 +375,7 @@ public class Connector {
                 ctx.updateActivity();
                 ctx.readBuffer.flip();
                 while (ctx.readBuffer.hasRemaining()) {
+                    
                     if (!ctx.isHeaderComplete()) {
                         while (ctx.readBuffer.hasRemaining() && !ctx.isHeaderComplete()) {
                             if (ctx.headerBytesLen >= MAX_HEADER_SIZE) {
@@ -388,11 +392,10 @@ public class Connector {
                             byte current = ctx.readBuffer.get();
                             ctx.headerBytes[ctx.headerBytesLen++] = current;
 
-                            if (ctx.headerBytesLen >= 4 &&
-                                    ctx.headerBytes[ctx.headerBytesLen - 4] == '\r' &&
-                                    ctx.headerBytes[ctx.headerBytesLen - 3] == '\n' &&
-                                    ctx.headerBytes[ctx.headerBytesLen - 2] == '\r' &&
-                                    ctx.headerBytes[ctx.headerBytesLen - 1] == '\n') {
+                            if (ctx.headerBytesLen >= 4 && ctx.headerBytes[ctx.headerBytesLen - 4] == '\r'
+                                    && ctx.headerBytes[ctx.headerBytesLen - 3] == '\n'
+                                    && ctx.headerBytes[ctx.headerBytesLen - 2] == '\r'
+                                    && ctx.headerBytes[ctx.headerBytesLen - 1] == '\n') {
                                 ctx.headerEndIndex = ctx.headerBytesLen - 4;
                             }
                         }
@@ -460,9 +463,9 @@ public class Connector {
                             if (DEBUG_LOG) {
                                 System.out.println("[DEBUG] " + "it's a file processing");
                             }
-                            if (ctx.contentLength > MAX_BODY_SIZE) {
-                                ctx.fileOutputStream.close();
-                            }
+                            // if (ctx.contentLength > MAX_BODY_SIZE) {
+                            //     ctx.fileOutputStream.close();
+                            // }
                             if (ctx.contentLength > 0 && ctx.bodyBytesReceived < ctx.contentLength) {
                                 int remainingBody = ctx.contentLength - ctx.bodyBytesReceived;
                                 int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
@@ -473,16 +476,16 @@ public class Connector {
                                     ctx.bodyBytesReceived += bytesToRead;
                                 }
                             }
-                            if (ctx.contentLength == ctx.bodyBytesReceived) {
-                                if (DEBUG_LOG) {
-                                    System.out.println("[DEBUG] " + "file part");
-                                    System.out.println("[DEBUG] ctx.contentLength " + ctx.contentLength);
-                                    System.out.println("[DEBUG] ctx.bodyBytesReceived " + ctx.bodyBytesReceived);
-                                }
-                                // ctx.fileOutputStream.close();
-                                // ctx.fileOutputStream = null;
-                                // Files.delete(ctx.tmpFile);
-                            }
+                            // if (ctx.contentLength == ctx.bodyBytesReceived) {
+                            //     if (DEBUG_LOG) {
+                            //         System.out.println("[DEBUG] " + "file part");
+                            //         System.out.println("[DEBUG] ctx.contentLength " + ctx.contentLength);
+                            //         System.out.println("[DEBUG] ctx.bodyBytesReceived " + ctx.bodyBytesReceived);
+                            //     }
+                            //     // ctx.fileOutputStream.close();
+                            //     // ctx.fileOutputStream = null;
+                            //     Files.delete(ctx.tmpFile);
+                            // }
                         }
                         if (ctx.bodyBytesReceived < ctx.contentLength) {
                             ctx.readBuffer.compact();
@@ -498,8 +501,8 @@ public class Connector {
                             return;
                         }
                     }
-                    boolean bodyReady = (!ctx.chunked && ctx.bodyBytesReceived >= Math.max(ctx.contentLength, 0)) ||
-                            (ctx.chunked && ctx.trailersComplete);
+                    boolean bodyReady = (!ctx.chunked && ctx.bodyBytesReceived >= Math.max(ctx.contentLength, 0))
+                            || (ctx.chunked && ctx.trailersComplete);
                     if (ctx.isHeaderComplete() && bodyReady) {
                         if (DEBUG_LOG) {
                             System.out.println("Request complete, queuing for processing...");
@@ -512,9 +515,8 @@ public class Connector {
                         } else {
                             bodyCopy = ctx.chunkBuffer != null ? ctx.chunkBuffer.toByteArray() : new byte[0];
                         }
-                        globalRequestQueue
-                                .offer(new RequestTask(clientChannel, headerCopy, ctx.headerEndIndex, bodyCopy,
-                                        key, ctx.isFileProcessing, ctx.tmpFile));
+                        globalRequestQueue.offer(new RequestTask(clientChannel, headerCopy, ctx.headerEndIndex,
+                                bodyCopy, key, ctx.isFileProcessing, ctx.tmpFile));
                         key.interestOps(0);
                         ctx.prepareForNextRequest();
                     }
@@ -631,7 +633,8 @@ public class Connector {
                     ctx.chunkBuffer = new ByteArrayOutputStream();
                 }
 
-                if (ctx.chunkBuffer.size() + size > MAX_BODY_SIZE) {
+                // Enforce total body size limit for chunked requests
+                if (ctx.totalBodyBytes + size > MAX_BODY_SIZE) {
                     if (DEBUG_LOG) {
                         System.err.println("[DEBUG] Closing connection: Chunk buffer overflow");
                     }
@@ -661,28 +664,52 @@ public class Connector {
                 }
                 continue;
             }
-            if (ctx.chunkBuffer.size() > MAX_BODY_RAM && !ctx.isFileProcessing) {
+            if (ctx.chunkBuffer.size() >= MAX_BODY_RAM && !ctx.isFileProcessing) {
+
                 ctx.isFileProcessing = true;
-                ctx.tmpFile = ctx.dir
-                        .resolve("tmp_upload_" + System.currentTimeMillis() + "_" + UUID.randomUUID());
+                ctx.tmpFile = ctx.dir.resolve("tmp_upload_" + System.currentTimeMillis() + "_" + UUID.randomUUID());
                 ctx.fileOutputStream = new FileOutputStream(ctx.tmpFile.toString());
+                if (ctx.chunkBuffer != null && ctx.chunkBuffer.size() > 0) {
+                    byte[] buffered = ctx.chunkBuffer.toByteArray();
+                    ctx.fileOutputStream.write(buffered);
+                    ctx.totalBodyBytes += buffered.length;
+                    ctx.chunkBuffer.reset();
+                }
             }
             if (ctx.currentChunkRead < ctx.currentChunkSize && !ctx.isFileProcessing) {
                 int remainingBody = ctx.currentChunkSize - ctx.currentChunkRead;
                 int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
                 if (bytesToRead > 0) {
+                    if (ctx.totalBodyBytes + bytesToRead > MAX_BODY_SIZE) {
+                        clientChannel.close();
+                        key.cancel();
+                        return false;
+                    }
                     byte[] temp = new byte[bytesToRead];
                     ctx.readBuffer.get(temp);
                     ctx.chunkBuffer.write(temp);
+                    ctx.totalBodyBytes += bytesToRead;
                     ctx.currentChunkRead += bytesToRead;
                 }
             } else if (ctx.currentChunkRead < ctx.currentChunkSize && ctx.isFileProcessing) {
+                if (ctx.chunkBuffer != null && ctx.chunkBuffer.size() > 0) {
+                    byte[] buffered = ctx.chunkBuffer.toByteArray();
+                    ctx.fileOutputStream.write(buffered);
+                    ctx.totalBodyBytes += buffered.length;
+                    ctx.chunkBuffer.reset();
+                }
                 int remainingBody = ctx.currentChunkSize - ctx.currentChunkRead;
                 int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
                 if (bytesToRead > 0) {
+                    if (ctx.totalBodyBytes + bytesToRead > MAX_BODY_SIZE) {
+                        clientChannel.close();
+                        key.cancel();
+                        return false;
+                    }
                     byte[] temp = new byte[bytesToRead];
                     ctx.readBuffer.get(temp);
                     ctx.fileOutputStream.write(temp);
+                    ctx.totalBodyBytes += bytesToRead;
                     ctx.currentChunkRead += bytesToRead;
                 }
             }

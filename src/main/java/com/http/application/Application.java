@@ -74,11 +74,6 @@ public class Application {
          ********************************************/
         if (!configurationValidator.isValidRequest(request, response)) {
             writeRsponseToClient(connector, client, response);
-            try {
-                client.close();
-            } catch (Exception ignored) {
-                // TODO: handle exception
-            }
             return;
         }
 
@@ -127,7 +122,7 @@ public class Application {
     }
 
     private void writeRsponseToClient(Connector connector, SocketChannel client, HttpResponse response) {
-        if (response.getHeaders().get("Content-Length") != null) {
+        if (response.getHeaders().get("Content-Length") == null) {
             response.addHeader("Content-Length", String.valueOf(response.getBody().length));
         }
 
