@@ -74,6 +74,11 @@ public class Application {
          ********************************************/
         if (!configurationValidator.isValidRequest(request, response)) {
             writeRsponseToClient(connector, client, response);
+            try {
+                client.close();
+            } catch (Exception ignored) {
+                // TODO: handle exception
+            }
             return;
         }
 
