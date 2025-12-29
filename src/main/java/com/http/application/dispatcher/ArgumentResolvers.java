@@ -6,6 +6,7 @@ import java.lang.reflect.Parameter;
 import com.http.annotation.parameters.RequestBody;
 import com.http.annotation.parameters.RequestHeader;
 import com.http.annotation.parameters.RequestParam;
+import com.http.config.session.Session;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 import com.http.utils.JSON;
@@ -34,6 +35,12 @@ public class ArgumentResolvers {
                     continue;
                 }
 
+                // Session
+                if (param.getType() == Session.class) {
+                    args[i] = request.getSession();
+                    continue;
+                }
+
                 // @RequestBody → deserialize JSON to object
                 if (param.isAnnotationPresent(RequestBody.class)) {
                     Class<?> type = param.getType();
@@ -47,7 +54,8 @@ public class ArgumentResolvers {
                         Object obj = JSON.toObjectFromJson(body, type);
                         args[i] = obj;
                     } catch (RuntimeException e) {
-                        throw new IllegalArgumentException("Failed to parse @RequestBody: " + e.getCause().getMessage(),e);
+                        throw new IllegalArgumentException("Failed to parse @RequestBody: " + e.getCause().getMessage(),
+                                e);
                     }
                     continue;
                 }

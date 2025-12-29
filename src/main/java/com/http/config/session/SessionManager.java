@@ -1,10 +1,10 @@
 package com.http.config.session;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.http.config.cookie.Cookie;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 
@@ -58,6 +58,12 @@ public class SessionManager {
             session = getSession(sessionId);
         }
 
+        if (session != null && session.isRemoved()) {
+            Cookie cookie = new Cookie(sessionName, "", "/", 0, false, false);
+            response.addCookie(cookie);
+            return;
+        }
+
         // If no session found or expired, create a new one
         if (session == null || session.isExpired()) {
             session = createSession(30 * 60 * 1000); // 30 min default
@@ -69,6 +75,14 @@ public class SessionManager {
 
         // Always add the cookie to the response
         response.addCookie(session.toCookie());
+    }
+
+    public void addSessionToRequest(HttpRequest request) {
+        String sessionId = request.getCookies().get(sessionName);
+        if (sessionId != null) {
+            Session session = getSession(sessionId);
+            request.setSession(session);
+        }
     }
 
 }

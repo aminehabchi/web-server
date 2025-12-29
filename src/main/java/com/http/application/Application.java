@@ -71,6 +71,11 @@ public class Application {
             return;
         }
 
+        /******************************************
+         * Add Session to request
+         ******************************************/
+        sessionManager.addSessionToRequest(request);
+
         /********************************************
          * Check if request is valid based on config
          ********************************************/
@@ -113,11 +118,6 @@ public class Application {
         }
 
         /*************************************************************
-         * serve error page based on configuration
-         *************************************************************/
-        configurationValidator.checkErrorPage(request, response);
-
-        /*************************************************************
          * Send the final response back to the client
          *************************************************************/
         writeRsponseToClient(connector, client, request, response);
@@ -125,13 +125,26 @@ public class Application {
 
     private void writeRsponseToClient(Connector connector, SocketChannel client, HttpRequest request,
             HttpResponse response) {
-                
+        /*************************************************************
+         * Apply session management
+         **************************************************************/
         sessionManager.applySession(request, response);
 
+        /*************************************************************
+         * serve error page based on configuration
+         *************************************************************/
+        configurationValidator.checkErrorPage(request, response);
+
+        /*************************************************************
+         * Set Content-Length header if not already set
+         *************************************************************/
         if (response.getHeaders().get("Content-Length") != null) {
             response.addHeader("Content-Length", String.valueOf(response.getBody().length));
         }
 
+        /*************************************************************
+         * Write response back to client
+         *************************************************************/
         byte[] res = response.toBytes();
         connector.writeToClient(client, res);
     }

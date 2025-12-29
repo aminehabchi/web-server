@@ -3,6 +3,7 @@ package com.http.http.request;
 import java.util.HashMap;
 
 import com.http.config.enums.HttpMethod;
+import com.http.config.session.Session;
 import com.http.config.url.Url;
 
 import lombok.Getter;
@@ -24,6 +25,8 @@ public class HttpRequest {
 
     private HashMap<String, String> headers = new HashMap<>();
     private HashMap<String, String> cookies = new HashMap<>();
+
+    private Session session;
 
     private String Body;
 
