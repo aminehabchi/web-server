@@ -72,7 +72,7 @@ public class ConfigurationValidator {
             }
 
             // Check body size
-            if (request.getBody() != null && request.getBody().length > targetServer.getClientMaxBodySize()) {
+            if (request.getBody() != null && request.getBodyAsByte().length > targetServer.getClientMaxBodySize()) {
                 response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE);
                 response.setBody("Body too large then config".getBytes());
                 return false;
@@ -216,7 +216,6 @@ public class ConfigurationValidator {
         // Handle files under the route
         String fileName = currentPath.substring(basePath.length());
         String filePath = SOURCE + route.getRoot() + fileName;
-
         if (!Utils.serveFile(response, filePath)) {
             // Fallback to index file if exists
             if (route.getIndexFile() != null) {

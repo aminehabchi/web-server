@@ -35,7 +35,7 @@ public class Connector {
     private static final int MAX_BODY_RAM = 10 * 1024;
     private static final int MAX_CHUNK_LINE = 2048;
     private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
-    private static final boolean DEBUG_LOG = true;
+    private static final boolean DEBUG_LOG = false;
 
     private int[] ports;
     private long requestTimeout;
