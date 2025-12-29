@@ -264,13 +264,14 @@ public class Connector {
                                     "=== Processing Request ===\n" + new String(requestBytes, StandardCharsets.UTF_8));
                         }
                         System.out.println();
-                        application.handleClientRequest(this, task.clientChannel, requestBytes/*
-                                                                                               * , ctx.isFileProcessing
-                                                                                               */); // here i will add a
-                                                                                                    // param that hold
-                                                                                                    // if the data will
-                                                                                                    // be read froma
-                                                                                                    // file
+                        application.handleClientRequest(this, task.clientChannel, requestBytes,
+                                task.tmpFile.toString()/*
+                                                        * , ctx.isFileProcessing
+                                                        */); // here i will add a
+                                                             // param that hold
+                                                             // if the data will
+                                                             // be read froma
+                                                             // file
                         // System.out.println("====================================== " +
                         // ctx.isFileProcessing);
                         if (task.isFileProcessing) {
@@ -375,7 +376,7 @@ public class Connector {
                 ctx.updateActivity();
                 ctx.readBuffer.flip();
                 while (ctx.readBuffer.hasRemaining()) {
-                    
+
                     if (!ctx.isHeaderComplete()) {
                         while (ctx.readBuffer.hasRemaining() && !ctx.isHeaderComplete()) {
                             if (ctx.headerBytesLen >= MAX_HEADER_SIZE) {
@@ -464,7 +465,7 @@ public class Connector {
                                 System.out.println("[DEBUG] " + "it's a file processing");
                             }
                             // if (ctx.contentLength > MAX_BODY_SIZE) {
-                            //     ctx.fileOutputStream.close();
+                            // ctx.fileOutputStream.close();
                             // }
                             if (ctx.contentLength > 0 && ctx.bodyBytesReceived < ctx.contentLength) {
                                 int remainingBody = ctx.contentLength - ctx.bodyBytesReceived;
@@ -477,14 +478,14 @@ public class Connector {
                                 }
                             }
                             // if (ctx.contentLength == ctx.bodyBytesReceived) {
-                            //     if (DEBUG_LOG) {
-                            //         System.out.println("[DEBUG] " + "file part");
-                            //         System.out.println("[DEBUG] ctx.contentLength " + ctx.contentLength);
-                            //         System.out.println("[DEBUG] ctx.bodyBytesReceived " + ctx.bodyBytesReceived);
-                            //     }
-                            //     // ctx.fileOutputStream.close();
-                            //     // ctx.fileOutputStream = null;
-                            //     Files.delete(ctx.tmpFile);
+                            // if (DEBUG_LOG) {
+                            // System.out.println("[DEBUG] " + "file part");
+                            // System.out.println("[DEBUG] ctx.contentLength " + ctx.contentLength);
+                            // System.out.println("[DEBUG] ctx.bodyBytesReceived " + ctx.bodyBytesReceived);
+                            // }
+                            // // ctx.fileOutputStream.close();
+                            // // ctx.fileOutputStream = null;
+                            // Files.delete(ctx.tmpFile);
                             // }
                         }
                         if (ctx.bodyBytesReceived < ctx.contentLength) {
@@ -586,7 +587,7 @@ public class Connector {
     }
 
     private static class ContentMeta {
-        int contentLength = -1;
+        int contentLength = 0;
         boolean chunked = false;
         boolean isGet = false;
         boolean isFileProcessing = false;
