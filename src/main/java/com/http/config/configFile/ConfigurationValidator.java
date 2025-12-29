@@ -111,10 +111,9 @@ public class ConfigurationValidator {
     }
 
     public boolean cgiHandler(HttpRequest request, HttpResponse response, ConfigRoute route) {
-        if (route == null || route.getCgi() == null || route.getCgi().size()==0) {
+        if (route == null || route.getCgi() == null || route.getCgi().size() == 0) {
             return true;
         }
-
 
         String currentPath = request.getUrl().getPath();
         String basePath = route.getPath();
@@ -172,11 +171,11 @@ public class ConfigurationValidator {
             }
 
             // Read CGI output (just the body)
-            byte[] output = process.getInputStream().readAllBytes();
-            process.waitFor();
-
-            // Set the response body only
-            response.setBody(output);
+            response.setCgiProcess(process);
+            response.setIn(process.getInputStream());
+            response.setBuffer(new byte[1024]);
+            response.setProssesse(true);
+            response.setFiniched(false);
 
             return false;
 
@@ -187,6 +186,7 @@ public class ConfigurationValidator {
 
         return false;
     }
+    
 
     public boolean StaticResourceResolver(HttpRequest request, HttpResponse response, ConfigRoute route) {
         if (route == null || route.getRoot() == null) {

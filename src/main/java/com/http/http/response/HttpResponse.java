@@ -2,6 +2,7 @@ package com.http.http.response;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,10 +25,13 @@ public class HttpResponse {
     private List<Cookie> cookies = new ArrayList<>();
     private byte[] body;
 
+    SocketChannel client;
+
+    private Process cgiProcess = null;
     private boolean isProssesse = false;
     private InputStream in = null;
     private boolean isFiniched = false;
-    byte[] buffer = new byte[1024];
+    byte[] buffer;
     int read;
 
     public boolean prossessCgiOutput() {
@@ -36,8 +40,9 @@ public class HttpResponse {
 
         try {
             if ((read = in.read(buffer)) != -1) {
-                System.out.write(buffer, 0, read);
                 // append to body
+                System.out.println("read bytes: " + read);
+                System.out.println("buffer: " + new String(buffer, 0, read, StandardCharsets.UTF_8));
                 byte[] newBody = new byte[body.length + read];
                 System.arraycopy(body, 0, newBody, 0, body.length);
                 System.arraycopy(buffer, 0, newBody, body.length, read);
@@ -46,13 +51,24 @@ public class HttpResponse {
                 return false;
             } else {
                 isFiniched = true;
+                addContentLengthHeader();
                 return true;
             }
         } catch (IOException e) {
             body = "Error reading stream cgi".getBytes(StandardCharsets.UTF_8);
             isFiniched = true;
+            addContentLengthHeader();
             return true;
         }
+    }
+
+    public void removeHeader(String key) {
+        this.headers.remove(key);
+    }
+
+    public void addContentLengthHeader() {
+        this.removeHeader("Content-Length");
+        this.addHeader("Content-Length", String.valueOf(body.length));
     }
 
     public HttpResponse() {

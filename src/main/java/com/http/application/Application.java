@@ -139,14 +139,17 @@ public class Application {
         /*************************************************************
          * Set Content-Length header if not already set
          *************************************************************/
-        if (response.getHeaders().get("Content-Length") == null) {
-            response.addHeader("Content-Length", String.valueOf(response.getBody().length));
-        }
+        response.addContentLengthHeader();
 
         /*************************************************************
          * Write response back to client
          *************************************************************/
-        byte[] res = response.toBytes();
-        connector.writeToClient(client, res);
+        if (response.isProssesse()) {
+            response.setClient(client);
+            connector.registerPendingCgiResponse(response);
+        } else {
+            byte[] res = response.toBytes();
+            connector.writeToClient(client, res);
+        }
     }
 }
