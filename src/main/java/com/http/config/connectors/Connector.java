@@ -2,6 +2,7 @@ package com.http.config.connectors;
 
 import com.http.application.Application;
 import com.http.config.defaults.DefaultConnectorConfig;
+import com.http.config.enums.HttpConnection;
 import com.http.http.response.HttpResponse;
 
 import java.io.IOException;
@@ -70,6 +71,7 @@ public class Connector {
         boolean isFileProcessing = false;
         FileOutputStream fileOutputStream;
         long totalBodyBytes = 0;
+        boolean isConnectionClose = false;
 
         ConnectionContext() {
             this.readBuffer = ByteBuffer.allocate(8192);
@@ -103,13 +105,13 @@ public class Connector {
                         System.err.println("[DEBUG] " + e.getMessage() + " line: 101");
                     }
                 }
-                try {
-                    if (tmpFile != null) {
-                        Files.delete(tmpFile);
-                    }
-                } catch (IOException e) {
-                    System.err.println("[DEBUG] " + e.getMessage() + " line: 109");
-                }
+                // try {
+                //     if (tmpFile != null) {
+                //         Files.delete(tmpFile);
+                //     }
+                // } catch (IOException e) {
+                //     System.err.println("[DEBUG] " + e.getMessage() + " line: 109");
+                // }
                 tmpFile = null;
                 fileOutputStream = null;
                 isFileProcessing = false;
@@ -813,6 +815,12 @@ public class Connector {
                     ctx.reset();
                     key.interestOps(SelectionKey.OP_READ);
                 }
+                if (ctx.isConnectionClose) {
+                    clientChannel.close();
+                    if (DEBUG_LOG) {
+                        System.out.println("[DEBUG] Closing connection: " + "Connection type is close");
+                    }
+                }
             }
 
         } catch (IOException e) {
@@ -849,13 +857,16 @@ public class Connector {
         }
     }
 
-    public void writeToClient(SocketChannel client, byte[] msg) {
+    public void writeToClient(SocketChannel client, byte[] msg, HttpConnection conn) {
         try {
             for (SelectionKey key : selector.keys()) {
                 if (key.channel() == client && key.isValid()) {
                     ConnectionContext ctx = (ConnectionContext) key.attachment();
                     if (ctx != null) {
                         ctx.writeBuffer = ByteBuffer.wrap(msg);
+                        if (conn.equals(HttpConnection.CLOSE)) {
+                            ctx.isConnectionClose = true;
+                        }
                         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
                         selector.wakeup();
                     }
@@ -882,7 +893,7 @@ public class Connector {
                 HttpResponse response = iterator.next();
                 if (response.prossessCgiOutput()) {
                     iterator.remove();
-                    writeToClient(response.getClient(), response.toBytes());
+                    writeToClient(response.getClient(), response.toBytes(), response.getConnection());
                 }
             }
         }
