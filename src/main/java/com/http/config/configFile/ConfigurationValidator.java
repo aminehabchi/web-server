@@ -29,6 +29,9 @@ public class ConfigurationValidator {
         }
 
         for (ConfigServer s : servers) {
+            if (s.getPorts() == null || s.getPorts().size() == 0) {
+                throw new IllegalArgumentException("No ports defined for server;");
+            }
             this.ports.addAll(s.getPorts());
         }
 

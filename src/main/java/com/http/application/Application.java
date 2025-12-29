@@ -150,7 +150,7 @@ public class Application {
             connector.registerPendingCgiResponse(response);
         } else {
             byte[] res = response.toBytes();
-            connector.writeToClient(client, res, request.getConnection());
+            connector.writeToClient(client, res);
         }
     }
 }
