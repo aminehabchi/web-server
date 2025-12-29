@@ -54,4 +54,13 @@ public class Utils {
             response.setBody("Failed to list directory".getBytes());
         }
     }
+
+    public static byte[] readFromFile(String path) {
+        try {
+            Path filePath = Path.of(path);
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            return new byte[] {};
+        }
+    }
 }

@@ -44,7 +44,7 @@ public class ArgumentResolvers {
                 // @RequestBody → deserialize JSON to object
                 if (param.isAnnotationPresent(RequestBody.class)) {
                     Class<?> type = param.getType();
-                    String body = request.getBody();
+                    String body = request.getBody().toString();
 
                     if (body == null || body.isEmpty()) {
                         throw new IllegalArgumentException("@RequestBody is missing or empty");

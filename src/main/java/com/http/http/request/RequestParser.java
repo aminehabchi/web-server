@@ -14,7 +14,7 @@ public class RequestParser {
 
     private static final Pattern HOST_PORT_PATTERN = Pattern.compile("^(.*?)(:(\\d+))?$");
 
-    public static HttpRequest parseRequest(String rawRequest) throws Exception {
+    public static HttpRequest parseRequest(String rawRequest, String tempBodyfilePath) throws Exception {
         String[] lines = rawRequest.split("\r\n");
         Level level = Level.LEVEL_START;
         HttpRequest httpRequest = new HttpRequest();
@@ -86,12 +86,19 @@ public class RequestParser {
                 }
             }
 
-            case LEVEL_BODY -> bodyBuilder.append(line).append("\n");
+            case LEVEL_BODY -> {
+                if (tempBodyfilePath != null) {
+                    httpRequest.setTempBodyfilePath(tempBodyfilePath);
+                    break;
+                } else {
+                    bodyBuilder.append(line).append("\n");
+                }
+            }
             }
         }
 
         if (bodyBuilder.length() > 0)
-            httpRequest.setBody(bodyBuilder.toString().trim());
+            httpRequest.setBody(bodyBuilder.toString().trim().getBytes());
 
         if (!httpRequest.getHeaders().containsKey("Host"))
             throw new Exception("Missing Host header");

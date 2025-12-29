@@ -72,7 +72,7 @@ public class ConfigurationValidator {
             }
 
             // Check body size
-            if (request.getBody() != null && request.getBody().length() > targetServer.getClientMaxBodySize()) {
+            if (request.getBody() != null && request.getBody().length > targetServer.getClientMaxBodySize()) {
                 response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE);
                 response.setBody("Body too large then config".getBytes());
                 return false;
@@ -148,7 +148,7 @@ public class ConfigurationValidator {
             env.put("QUERY_STRING",
                     request.getUrl().getQueryParams() != null ? request.getUrl().getQueryParams().toString() : "");
             if (request.getBody() != null) {
-                env.put("CONTENT_LENGTH", String.valueOf(request.getBody().length()));
+                env.put("CONTENT_LENGTH", String.valueOf(request.getBody().length));
             }
 
             env.put("CONTENT_TYPE", request.getHeader("Content-Type") != null ? request.getHeader("Content-Type") : "");
@@ -162,10 +162,10 @@ public class ConfigurationValidator {
 
             // Write POST body if needed
             if ("POST".equalsIgnoreCase(request.getMethod().name()) && request.getBody() != null
-                    && request.getBody().length() > 0) {
+                    && request.getBody().length > 0) {
                 try (OutputStream os = process.getOutputStream()) {
                     if (request.getBody() != null) {
-                        os.write(request.getBody().getBytes()); // write actual body bytes
+                        os.write(request.getBody()); // write actual body bytes
                         os.flush();
                     }
                 }

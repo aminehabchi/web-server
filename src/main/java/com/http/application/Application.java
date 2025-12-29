@@ -44,7 +44,8 @@ public class Application {
         connector.disconnect();
     }
 
-    public void handleClientRequest(Connector connector, SocketChannel client, byte[] requestData) {
+    public void handleClientRequest(Connector connector, SocketChannel client, byte[] requestData,
+            String tempBodyfilePath) {
         System.out.println();
         System.out.println();
         System.out.println("handleClientRequest");
@@ -63,7 +64,7 @@ public class Application {
          ******************************************/
         HttpRequest request = null;
         try {
-            request = RequestParser.parseRequest(result);
+            request = RequestParser.parseRequest(result, tempBodyfilePath);
         } catch (Exception e) {
             response.setStatus(HttpStatus.BAD_REQUEST);
             response.setBody(e.getMessage().getBytes());
@@ -138,7 +139,7 @@ public class Application {
         /*************************************************************
          * Set Content-Length header if not already set
          *************************************************************/
-        if (response.getHeaders().get("Content-Length") != null) {
+        if (response.getHeaders().get("Content-Length") == null) {
             response.addHeader("Content-Length", String.valueOf(response.getBody().length));
         }
 
