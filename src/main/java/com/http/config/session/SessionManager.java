@@ -87,4 +87,8 @@ public class SessionManager {
         }
     }
 
+    public Map<String, Session> getSessions() {
+        return sessions;
+    }
+
 }
