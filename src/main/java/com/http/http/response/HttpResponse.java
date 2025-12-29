@@ -1,5 +1,7 @@
 package com.http.http.response;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,6 +11,11 @@ import java.util.Map;
 import com.http.config.cookie.Cookie;
 import com.http.config.enums.HttpStatus;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class HttpResponse {
 
     private String version;
@@ -16,6 +23,37 @@ public class HttpResponse {
     private Map<String, String> headers = new HashMap<>();
     private List<Cookie> cookies = new ArrayList<>();
     private byte[] body;
+
+    private boolean isProssesse = false;
+    private InputStream in = null;
+    private boolean isFiniched = false;
+    byte[] buffer = new byte[1024];
+    int read;
+
+    public boolean prossessCgiOutput() {
+        if (in == null)
+            return true;
+
+        try {
+            if ((read = in.read(buffer)) != -1) {
+                System.out.write(buffer, 0, read);
+                // append to body
+                byte[] newBody = new byte[body.length + read];
+                System.arraycopy(body, 0, newBody, 0, body.length);
+                System.arraycopy(buffer, 0, newBody, body.length, read);
+                body = newBody;
+
+                return false;
+            } else {
+                isFiniched = true;
+                return true;
+            }
+        } catch (IOException e) {
+            body = "Error reading stream cgi".getBytes(StandardCharsets.UTF_8);
+            isFiniched = true;
+            return true;
+        }
+    }
 
     public HttpResponse() {
         this.version = "HTTP/1.1";
@@ -40,46 +78,11 @@ public class HttpResponse {
         cookies.add(cookie);
     }
 
-    // Getters
-    public String getVersion() {
-        return version;
-    }
-
-    public HttpStatus getStatus() {
-        return status;
-    }
-
-    public Map<String, String> getHeaders() {
-        return headers;
-    }
-
-    public List<Cookie> getCookies() {
-        return cookies;
-    }
-
-    public byte[] getBody() {
-        return body;
-    }
-
-    // Setters
-    public void setVersion(String version) {
-        this.version = version;
-    }
-
-    public void setStatus(HttpStatus status) {
-        this.status = status;
-    }
-
-    public void setBody(byte[] body) {
-        this.body = body;
-    }
-
     public byte[] toBytes() {
         StringBuilder sb = new StringBuilder();
 
         // Status line
-        sb.append(version).append(" ").append(status.getCode())
-                .append(" ").append(status.getReason()).append("\r\n");
+        sb.append(version).append(" ").append(status.getCode()).append(" ").append(status.getReason()).append("\r\n");
 
         // Headers
         for (Map.Entry<String, String> header : headers.entrySet()) {
