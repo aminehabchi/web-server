@@ -59,6 +59,7 @@ public class SessionManager {
         }
 
         if (session != null && session.isRemoved()) {
+            this.sessions.remove(sessionId);
             Cookie cookie = new Cookie(sessionName, "", "/", 0, false, false);
             response.addCookie(cookie);
             return;
@@ -67,9 +68,10 @@ public class SessionManager {
         // If no session found or expired, create a new one
         if (session == null || session.isExpired()) {
             session = createSession(30 * 60 * 1000); // 30 min default
+            if (sessionId != null) {
+                this.sessions.remove(sessionId);
+            }
         } else {
-            // Update last accessed timestamp for active session
-            session.updateLastAccessed();
             return;
         }
 

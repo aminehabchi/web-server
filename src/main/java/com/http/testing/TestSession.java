@@ -19,7 +19,7 @@ public class TestSession {
         visitCount++;
         session.setAttribute("visitCount", visitCount);
 
-        if (visitCount == 20) {
+        if (visitCount == 10) {
             session.clear();
         }
 
