@@ -2,6 +2,7 @@ package com.http.config.connectors;
 
 import com.http.application.Application;
 import com.http.config.defaults.DefaultConnectorConfig;
+import com.http.http.response.HttpResponse;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -17,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -91,15 +93,25 @@ public class Connector {
             chunkBuffer = null;
             writeBuffer = null;
             writeState = 0;
-            if (isFileProcessing == true) {
+            if (isFileProcessing) {
                 try {
-                    fileOutputStream.close();
-                    // Files.delete(tmpFile);
-                } catch (Exception e) {
+                    if (fileOutputStream != null) {
+                        fileOutputStream.close();
+                    }
+                } catch (IOException e) {
                     if (DEBUG_LOG) {
-                        System.out.println("[DEBUG] " + e.getMessage());
+                        System.err.println("[DEBUG] " + e.getMessage() + " line: 101");
                     }
                 }
+                try {
+                    if (tmpFile != null) {
+                        Files.delete(tmpFile);
+                    }
+                } catch (IOException e) {
+                    System.err.println("[DEBUG] " + e.getMessage() + " line: 109");
+                }
+                tmpFile = null;
+                fileOutputStream = null;
                 isFileProcessing = false;
             }
             totalBodyBytes = 0;
@@ -150,7 +162,6 @@ public class Connector {
         int headerLength;
         byte[] bodyBytes;
         SelectionKey selectionKey;
-        boolean isFileProcessing = false;
         Path tmpFile;
 
         // RequestTask(SocketChannel clientChannel, byte[] headerBytes, int
@@ -170,7 +181,6 @@ public class Connector {
             this.headerLength = headerLength;
             this.bodyBytes = bodyBytes;
             this.selectionKey = selectionKey;
-            this.isFileProcessing = isFileProcessing;
             this.tmpFile = tmpFile;
         }
     }
@@ -189,6 +199,7 @@ public class Connector {
     }
 
     public Connector(long requestTimeout) {
+
         this.validateRequestTimeout(requestTimeout);
         this.requestTimeout = requestTimeout;
         // this.port = DefaultConnectorConfig.DEFAULT_PORT;
@@ -223,6 +234,7 @@ public class Connector {
 
         while (true) {
             processPendingRequests();
+            processPendingCGIResponses();
 
             selector.select(100);
             Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
@@ -242,6 +254,28 @@ public class Connector {
             }
             checkTimeouts();
         }
+    }
+
+    private void closingAndDeleteFile(ConnectionContext ctx) {
+        try {
+            if (ctx.fileOutputStream != null) {
+                ctx.fileOutputStream.close();
+            }
+        } catch (IOException e) {
+            if (DEBUG_LOG) {
+                System.out.println("[DEBUG] Line 336 " + e.getMessage());
+            }
+        }
+        try {
+            if (ctx.tmpFile != null) {
+                Files.delete(ctx.tmpFile);
+            }
+        } catch (IOException e) {
+            System.out.println("[DEBUG] Line 344 " + e.getMessage());
+        }
+        ctx.tmpFile = null;
+        ctx.fileOutputStream = null;
+        ctx.isFileProcessing = false;
     }
 
     private void processPendingRequests() {
@@ -264,37 +298,11 @@ public class Connector {
                                     "=== Processing Request ===\n" + new String(requestBytes, StandardCharsets.UTF_8));
                         }
                         System.out.println();
-                        application.handleClientRequest(this, task.clientChannel, requestBytes,
-                                task.tmpFile.toString()/*
-                                                        * , ctx.isFileProcessing
-                                                        */); // here i will add a
-                                                             // param that hold
-                                                             // if the data will
-                                                             // be read froma
-                                                             // file
-                        // System.out.println("====================================== " +
-                        // ctx.isFileProcessing);
-                        if (task.isFileProcessing) {
-                            //
-                            try {
-                                if (ctx.fileOutputStream != null) {
-                                    ctx.fileOutputStream.close();
-                                }
-                            } catch (IOException e) {
-                                if (DEBUG_LOG) {
-                                    System.out.println("[DEBUG] Line 336 " + e.getMessage());
-                                }
-                            }
-                            try {
-                                if (ctx.tmpFile != null) {
-                                    Files.delete(ctx.tmpFile);
-                                }
-                            } catch (IOException e) {
-                                System.out.println("[DEBUG] Line 344 " + e.getMessage());
-                            }
-                            ctx.tmpFile = null;
-                            ctx.fileOutputStream = null;
-                            ctx.isFileProcessing = false;
+                        if (task.tmpFile != null) {
+                            application.handleClientRequest(this, task.clientChannel, requestBytes,
+                                    task.tmpFile.toString());
+                        } else {
+                            application.handleClientRequest(this, task.clientChannel, requestBytes, null);
                         }
                         ctx.writeState = 1;
                         task.selectionKey.interestOps(SelectionKey.OP_WRITE);
@@ -346,26 +354,9 @@ public class Connector {
                 if (DEBUG_LOG) {
                     System.out.println("[DEBUG] Closing connection: Client sent EOF");
                 }
+
                 if (ctx.isFileProcessing) {
-                    try {
-                        if (ctx.fileOutputStream != null) {
-                            ctx.fileOutputStream.close();
-                        }
-                    } catch (IOException e) {
-                        if (DEBUG_LOG) {
-                            System.out.println("[DEBUG] Line 336 " + e.getMessage());
-                        }
-                    }
-                    try {
-                        if (ctx.tmpFile != null) {
-                            Files.delete(ctx.tmpFile);
-                        }
-                    } catch (IOException e) {
-                        System.out.println("[DEBUG] Line 344 " + e.getMessage());
-                    }
-                    ctx.tmpFile = null;
-                    ctx.fileOutputStream = null;
-                    ctx.isFileProcessing = false;
+                    this.closingAndDeleteFile(ctx);
                 }
                 clientChannel.close();
                 key.cancel();
@@ -873,6 +864,27 @@ public class Connector {
             }
         } catch (Exception e) {
             System.err.println("Failed to queue write: " + e.getMessage());
+        }
+    }
+
+    List<HttpResponse> PendingCgiresponses = new ArrayList<>();
+
+    public void registerPendingCgiResponse(HttpResponse response) {
+        synchronized (PendingCgiresponses) {
+            PendingCgiresponses.add(response);
+        }
+    }
+
+    public void processPendingCGIResponses() {
+        synchronized (PendingCgiresponses) {
+            Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
+            while (iterator.hasNext()) {
+                HttpResponse response = iterator.next();
+                if (response.prossessCgiOutput()) {
+                    iterator.remove();
+                    writeToClient(response.getClient(), response.toBytes());
+                }
+            }
         }
     }
 
