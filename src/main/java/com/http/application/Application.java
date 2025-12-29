@@ -146,10 +146,11 @@ public class Application {
          *************************************************************/
         if (response.isProssesse()) {
             response.setClient(client);
+            response.setConnection(request.getConnection());
             connector.registerPendingCgiResponse(response);
         } else {
             byte[] res = response.toBytes();
-            connector.writeToClient(client, res);
+            connector.writeToClient(client, res, request.getConnection());
         }
     }
 }

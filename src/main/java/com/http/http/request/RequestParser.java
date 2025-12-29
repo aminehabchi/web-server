@@ -84,6 +84,10 @@ public class RequestParser {
                 if (key.equalsIgnoreCase("Cookie")) {
                     parseCookies(value, httpRequest);
                 }
+
+                if (key.equalsIgnoreCase("Connection")) {
+                    httpRequest.setConnection(com.http.config.enums.HttpConnection.fromHeader(value));
+                }
             }
 
             case LEVEL_BODY -> {

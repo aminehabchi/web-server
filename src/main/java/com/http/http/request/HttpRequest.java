@@ -2,6 +2,7 @@ package com.http.http.request;
 
 import java.util.HashMap;
 
+import com.http.config.enums.HttpConnection;
 import com.http.config.enums.HttpMethod;
 import com.http.config.session.Session;
 import com.http.config.url.Url;
@@ -23,6 +24,8 @@ public class HttpRequest {
 
     private String httpVersion;
     private String Authorization;
+
+    private HttpConnection connection;
 
     private HashMap<String, String> headers = new HashMap<>();
     private HashMap<String, String> cookies = new HashMap<>();

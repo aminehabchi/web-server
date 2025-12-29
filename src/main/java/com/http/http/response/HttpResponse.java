@@ -9,7 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 import com.http.config.cookie.Cookie;
+import com.http.config.enums.HttpConnection;
 import com.http.config.enums.HttpStatus;
 
 import lombok.Getter;
@@ -24,6 +26,7 @@ public class HttpResponse {
     private Map<String, String> headers = new HashMap<>();
     private List<Cookie> cookies = new ArrayList<>();
     private byte[] body;
+    private HttpConnection connection;
 
     SocketChannel client;
 
