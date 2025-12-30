@@ -108,6 +108,7 @@ public class ConfigurationValidator {
                         break;
                     }
                 }
+
                 if (targetServer == null) {
                     response.setStatus(HttpStatus.NOT_FOUND);
                     response.setBody(("Invalid Host header " + host).getBytes());
@@ -268,11 +269,11 @@ public class ConfigurationValidator {
         if (currentPath.equals(basePath)) {
             if (route.isDirectoryListing()) {
                 // Serve directory listing
-                Utils.serveDirectoryListing(request,response, SOURCE + route.getRoot(), basePath);
+                Utils.serveDirectoryListing(request, response, SOURCE + route.getRoot(), basePath);
             } else if (route.getIndexFile() != null) {
                 // Serve index file
                 String indexPath = SOURCE + route.getRoot() + "/" + route.getIndexFile();
-                Utils.serveFile(response, indexPath);
+                Utils.serveFile(response, indexPath, SOURCE + route.getRoot());
             } else {
                 // Directory listing not allowed
                 response.setStatus(HttpStatus.FORBIDDEN);
@@ -284,10 +285,11 @@ public class ConfigurationValidator {
         // Handle files under the route
         String fileName = currentPath.substring(basePath.length());
         String filePath = SOURCE + route.getRoot() + fileName;
-        if (!Utils.serveFile(response, filePath)) {
+        if (!Utils.serveFile(response, filePath, SOURCE + route.getRoot())) {
             // Fallback to index file if exists
             if (route.getIndexFile() != null) {
-                Utils.serveFile(response, SOURCE + route.getRoot() + "/" + route.getIndexFile());
+                Utils.serveFile(response, SOURCE + route.getRoot() + "/" + route.getIndexFile(),
+                        SOURCE + route.getRoot());
             } else {
                 response.setStatus(HttpStatus.NOT_FOUND);
                 response.setBody(("File " + fileName + " : Not found").getBytes());
@@ -321,7 +323,7 @@ public class ConfigurationValidator {
         }
 
         try {
-            Utils.serveFile(response, SOURCE + pagePath);
+            Utils.serveFile(response, SOURCE + pagePath, SOURCE);
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -11,9 +11,18 @@ import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 
 public class Utils {
-    public static boolean serveFile(HttpResponse response, String filePath) {
+    public static boolean serveFile(HttpResponse response, String filePath, String source) {
         try {
-            Path path = Paths.get(filePath);
+
+            Path basePath = Paths.get(source).normalize();
+            Path path = Paths.get(filePath).normalize();
+            System.out.println(basePath.toString() + " ========== " + path.toString());
+            if (!path.startsWith(basePath)) {
+                response.setStatus(HttpStatus.BAD_REQUEST);
+                response.setBody("Invalid file path".getBytes());
+                return false;
+            }
+
             if (!Files.exists(path)) {
                 return false;
             }
@@ -44,7 +53,10 @@ public class Utils {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dirPath)) {
             StringBuilder fileList = new StringBuilder("<html><body><ul>");
             for (Path file : stream) {
-                fileList.append("<li><a href=\"").append("http://localhost:"+Integer.toString(request.getPort())) // Adjust host/port if needed
+                fileList.append("<li><a href=\"").append("http://localhost:" + Integer.toString(request.getPort())) // Adjust
+                                                                                                                    // host/port
+                                                                                                                    // if
+                                                                                                                    // needed
                         .append(basePath).append("/" + file.getFileName()).append("\">").append(file.getFileName())
                         .append("</a></li>");
             }
