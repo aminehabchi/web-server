@@ -132,6 +132,8 @@ public class Application {
             connector.writeToClient(client, res, HttpConnection.CLOSE);
             return;
         }
+        System.out.println(response.getConnection());
+
         /*************************************************************
          * Apply session management
          **************************************************************/
@@ -152,6 +154,7 @@ public class Application {
          *************************************************************/
         if (response.isProssesse()) {
             response.setClient(client);
+            response.setConnection(request.getConnection());
             response.setConnection(request.getConnection());
             connector.registerPendingCgiResponse(response);
         } else {

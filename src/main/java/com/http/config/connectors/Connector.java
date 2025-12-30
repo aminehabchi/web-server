@@ -106,11 +106,11 @@ public class Connector {
                     }
                 }
                 // try {
-                //     if (tmpFile != null) {
-                //         Files.delete(tmpFile);
-                //     }
+                // if (tmpFile != null) {
+                // Files.delete(tmpFile);
+                // }
                 // } catch (IOException e) {
-                //     System.err.println("[DEBUG] " + e.getMessage() + " line: 109");
+                // System.err.println("[DEBUG] " + e.getMessage() + " line: 109");
                 // }
                 tmpFile = null;
                 fileOutputStream = null;
@@ -881,22 +881,23 @@ public class Connector {
     List<HttpResponse> PendingCgiresponses = new ArrayList<>();
 
     public void registerPendingCgiResponse(HttpResponse response) {
-        synchronized (PendingCgiresponses) {
-            PendingCgiresponses.add(response);
-        }
+
+        PendingCgiresponses.add(response);
+
     }
 
     public void processPendingCGIResponses() {
-        synchronized (PendingCgiresponses) {
-            Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
-            while (iterator.hasNext()) {
-                HttpResponse response = iterator.next();
-                if (response.prossessCgiOutput()) {
-                    iterator.remove();
-                    writeToClient(response.getClient(), response.toBytes(), response.getConnection());
-                }
+
+        Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
+        if (iterator.hasNext()) {
+            HttpResponse response = iterator.next();
+            if (response.prossessCgiOutput()) {
+                iterator.remove();
+                System.out.println("=== Writing CGI Response to Client ===" + response.getConnection());
+                writeToClient(response.getClient(), response.toBytes(), response.getConnection());
             }
         }
+
     }
 
     public void disconnect() {

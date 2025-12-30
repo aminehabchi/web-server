@@ -159,6 +159,8 @@ public class ConfigurationValidator {
             return true;
         }
 
+        System.out.println("CGI HANDLER");
+
         String currentPath = request.getUrl().getPath();
         String basePath = route.getPath();
         String cgiName = currentPath.substring(basePath.length());

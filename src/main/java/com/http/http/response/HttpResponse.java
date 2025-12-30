@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 import com.http.config.cookie.Cookie;
 import com.http.config.enums.HttpConnection;
 import com.http.config.enums.HttpStatus;
@@ -26,7 +25,7 @@ public class HttpResponse {
     private Map<String, String> headers = new HashMap<>();
     private List<Cookie> cookies = new ArrayList<>();
     private byte[] body;
-    private HttpConnection connection;
+    private HttpConnection connection = HttpConnection.KEEP_ALIVE;
 
     SocketChannel client;
 
@@ -42,21 +41,23 @@ public class HttpResponse {
             return true;
 
         try {
-            if ((read = in.read(buffer)) != -1) {
-                // append to body
-                System.out.println("read bytes: " + read);
-                System.out.println("buffer: " + new String(buffer, 0, read, StandardCharsets.UTF_8));
-                byte[] newBody = new byte[body.length + read];
-                System.arraycopy(body, 0, newBody, 0, body.length);
-                System.arraycopy(buffer, 0, newBody, body.length, read);
-                body = newBody;
-
-                return false;
-            } else {
-                isFiniched = true;
-                addContentLengthHeader();
-                return true;
+            int bytesAvailable = in.available();
+            if (bytesAvailable > 0) {
+                int toRead = Math.min(buffer.length, bytesAvailable);
+                read = in.read(buffer, 0, toRead); 
+                while (read > 0) {
+                    // append to body
+                    byte[] newBody = new byte[body.length + read];
+                    System.arraycopy(body, 0, newBody, 0, body.length);
+                    System.arraycopy(buffer, 0, newBody, body.length, read);
+                    body = newBody;
+                }
             }
+
+            isFiniched = true;
+            addContentLengthHeader();
+            return true;
+
         } catch (IOException e) {
             body = "Error reading stream cgi".getBytes(StandardCharsets.UTF_8);
             isFiniched = true;
@@ -130,12 +131,16 @@ public class HttpResponse {
         return fullResponse;
     }
 
+    public HttpConnection getConnection() {
+        return this.connection;
+    }
+
     public static HttpResponse defaultResponse() {
         HttpResponse response = new HttpResponse();
         response.setStatus(HttpStatus.OK);
         response.setVersion("HTTP/1.1");
         response.setBody(new byte[0]);
-
+        response.setConnection(HttpConnection.KEEP_ALIVE);
         // default headers
         response.addHeader("Content-Type", "text/html");
 

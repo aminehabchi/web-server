@@ -53,7 +53,6 @@ public class SessionManager {
         String sessionId = request.getCookies().get(sessionName);
         Session session = null;
 
-        System.out.println(sessionId);
         if (sessionId != null) {
             session = getSession(sessionId);
         }
