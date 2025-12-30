@@ -2,8 +2,10 @@ package com.http.config.configFile;
 
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.http.config.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
@@ -17,7 +19,7 @@ import lombok.Setter;
 @Getter
 public class ConfigurationValidator {
     private List<ConfigServer> servers;
-    private List<Integer> ports = new ArrayList<>();;
+    private Set<Integer> ports = new HashSet<>();;
     private static final String SOURCE = "./src/main/resources";
 
     public ConfigurationValidator() {
@@ -28,18 +30,51 @@ public class ConfigurationValidator {
             throw e;
         }
 
-        for (ConfigServer s : servers) {
-            if (s.getPorts() == null || s.getPorts().size() == 0) {
-                throw new IllegalArgumentException("No ports defined for server;");
-            }
-            this.ports.addAll(s.getPorts());
+        for (ConfigServer server : this.servers) {
+            this.ports.addAll(server.getPorts());
         }
 
-        validatePort(this.ports);
+        validatePort(new ArrayList<>(this.ports));
+
+        validateConfiguration(servers);
+    }
+
+    public void validateConfiguration(List<ConfigServer> servers) {
+        for (int port : this.ports) {
+            // Check for multiple default servers on the same port
+            int countDefault = 0;
+            for (ConfigServer server : servers) {
+                if (server.getPorts().contains(port) && server.isDefault()) {
+                    countDefault++;
+                }
+            }
+            if (countDefault > 1) {
+                throw new IllegalArgumentException("Multiple default servers configured for port " + port);
+            }
+
+            // Check for duplicate hosts on the same port
+            Set<String> hostSet = new HashSet<>();
+            for (ConfigServer server : servers) {
+                if (server.getPorts().contains(port)) {
+                    for (String host : server.getHosts()) {
+                        if (hostSet.contains(host)) {
+
+                            throw new IllegalArgumentException(
+                                    "Duplicate host '" + host + "' configured for port " + port);
+                        }
+                        hostSet.add(host);
+
+                    }
+                }
+            }
+
+            // Clear hostSet for the next port
+            hostSet.clear();
+        }
     }
 
     public List<Integer> getPorts() {
-        return ports;
+        return new ArrayList<>(this.ports);
     }
 
     public void validatePort(List<Integer> ports) {
@@ -52,30 +87,36 @@ public class ConfigurationValidator {
 
     public boolean isValidRequest(HttpRequest request, HttpResponse response) {
         try {
-            // Check if port exists in configuration
+            // port && host check
+            int port = request.getPort();
+            String host = request.getHost();
+
+            // Get target server by port & host
             ConfigServer targetServer = null;
             for (ConfigServer server : servers) {
-                if (server.getPorts().contains(request.getPort())) {
+                if (server.getPorts().contains(port) && server.getHosts().contains(host)) {
                     targetServer = server;
                     break;
                 }
             }
 
+            // If no exact match, find default server for the port
             if (targetServer == null) {
-                response.setStatus(HttpStatus.NOT_FOUND);
-                return false;
-            }
-
-            // check Host header
-            String hostHeader = request.getHost();
-            if (!targetServer.getHosts().contains(hostHeader) && !targetServer.isDefault()) {
-                response.setStatus(HttpStatus.BAD_REQUEST);
-                response.setBody(("Invalid Host header " + hostHeader).getBytes());
-                return false;
+                for (ConfigServer server : servers) {
+                    if (server.getPorts().contains(port) && server.isDefault()) {
+                        targetServer = server;
+                        break;
+                    }
+                }
+                if (targetServer == null) {
+                    response.setStatus(HttpStatus.NOT_FOUND);
+                    response.setBody(("Invalid Host header " + host).getBytes());
+                    return false;
+                }
             }
 
             // Check body size
-            if (request.getBody() != null && request.getBody().length > targetServer.getClientMaxBodySize()) {
+            if (request.getBody() != null && request.getBodyAsByte().length > targetServer.getClientMaxBodySize()) {
                 response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE);
                 response.setBody("Body too large then config".getBytes());
                 return false;
@@ -117,6 +158,8 @@ public class ConfigurationValidator {
         if (route == null || route.getCgi() == null || route.getCgi().size() == 0) {
             return true;
         }
+
+        System.out.println("CGI HANDLER");
 
         String currentPath = request.getUrl().getPath();
         String basePath = route.getPath();
@@ -189,7 +232,6 @@ public class ConfigurationValidator {
 
         return false;
     }
-    
 
     public boolean StaticResourceResolver(HttpRequest request, HttpResponse response, ConfigRoute route) {
         if (route == null || route.getRoot() == null) {
@@ -219,7 +261,6 @@ public class ConfigurationValidator {
         // Handle files under the route
         String fileName = currentPath.substring(basePath.length());
         String filePath = SOURCE + route.getRoot() + fileName;
-
         if (!Utils.serveFile(response, filePath)) {
             // Fallback to index file if exists
             if (route.getIndexFile() != null) {

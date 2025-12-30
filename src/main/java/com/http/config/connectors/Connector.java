@@ -35,7 +35,7 @@ public class Connector {
     private static final int MAX_BODY_RAM = 10 * 1024;
     private static final int MAX_CHUNK_LINE = 2048;
     private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
-    private static final boolean DEBUG_LOG = true;
+    private static final boolean DEBUG_LOG = false;
 
     private int[] ports;
     private long requestTimeout;
@@ -106,11 +106,11 @@ public class Connector {
                     }
                 }
                 // try {
-                //     if (tmpFile != null) {
-                //         Files.delete(tmpFile);
-                //     }
+                // if (tmpFile != null) {
+                // Files.delete(tmpFile);
+                // }
                 // } catch (IOException e) {
-                //     System.err.println("[DEBUG] " + e.getMessage() + " line: 109");
+                // System.err.println("[DEBUG] " + e.getMessage() + " line: 109");
                 // }
                 tmpFile = null;
                 fileOutputStream = null;
@@ -881,21 +881,22 @@ public class Connector {
     List<HttpResponse> PendingCgiresponses = new ArrayList<>();
 
     public void registerPendingCgiResponse(HttpResponse response) {
-        synchronized (PendingCgiresponses) {
-            PendingCgiresponses.add(response);
-        }
+
+        PendingCgiresponses.add(response);
+
     }
 
     public void processPendingCGIResponses() {
-        synchronized (PendingCgiresponses) {
-            Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
-            while (iterator.hasNext()) {
-                HttpResponse response = iterator.next();
-                if (response.prossessCgiOutput()) {
-                    iterator.remove();
-                    writeToClient(response.getClient(), response.toBytes(), response.getConnection());
-                }
+        Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
+
+        while (iterator.hasNext()) {
+            HttpResponse response = iterator.next();
+
+            if (response.processCgiOutput()) {
+                iterator.remove();
+                writeToClient(response.getClient(), response.toBytes(), response.getConnection());
             }
+            // If not finished and no data, leave it in the list for next loop
         }
     }
 

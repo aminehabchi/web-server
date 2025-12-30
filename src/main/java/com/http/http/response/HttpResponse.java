@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 import com.http.config.cookie.Cookie;
 import com.http.config.enums.HttpConnection;
 import com.http.config.enums.HttpStatus;
@@ -26,7 +25,7 @@ public class HttpResponse {
     private Map<String, String> headers = new HashMap<>();
     private List<Cookie> cookies = new ArrayList<>();
     private byte[] body;
-    private HttpConnection connection;
+    private HttpConnection connection = HttpConnection.KEEP_ALIVE;
 
     SocketChannel client;
 
@@ -37,26 +36,39 @@ public class HttpResponse {
     byte[] buffer;
     int read;
 
-    public boolean prossessCgiOutput() {
-        if (in == null)
+    public boolean processCgiOutput() {
+        if (in == null) {
+            isFiniched = true;
+            addContentLengthHeader();
             return true;
+        }
 
         try {
-            if ((read = in.read(buffer)) != -1) {
-                // append to body
-                System.out.println("read bytes: " + read);
-                System.out.println("buffer: " + new String(buffer, 0, read, StandardCharsets.UTF_8));
-                byte[] newBody = new byte[body.length + read];
-                System.arraycopy(body, 0, newBody, 0, body.length);
-                System.arraycopy(buffer, 0, newBody, body.length, read);
-                body = newBody;
+            int bytesAvailable = in.available();
 
+            if (bytesAvailable == 0) {
+                // No data ready yet
                 return false;
-            } else {
-                isFiniched = true;
-                addContentLengthHeader();
-                return true;
             }
+
+            // Read up to buffer size or available bytes
+            int toRead = Math.min(buffer.length, bytesAvailable);
+            int bytesRead = in.read(buffer, 0, toRead);
+
+            if (bytesRead > 0) {
+                // Append read bytes to body
+                byte[] newBody = new byte[body.length + bytesRead];
+                System.arraycopy(body, 0, newBody, 0, body.length);
+                System.arraycopy(buffer, 0, newBody, body.length, bytesRead);
+                body = newBody;
+            } else if (bytesRead == -1) {
+                // End of stream
+                isFiniched = true;
+            }
+            addContentLengthHeader();
+
+            return true; // We read something
+
         } catch (IOException e) {
             body = "Error reading stream cgi".getBytes(StandardCharsets.UTF_8);
             isFiniched = true;
@@ -130,12 +142,16 @@ public class HttpResponse {
         return fullResponse;
     }
 
+    public HttpConnection getConnection() {
+        return this.connection;
+    }
+
     public static HttpResponse defaultResponse() {
         HttpResponse response = new HttpResponse();
         response.setStatus(HttpStatus.OK);
         response.setVersion("HTTP/1.1");
         response.setBody(new byte[0]);
-
+        response.setConnection(HttpConnection.KEEP_ALIVE);
         // default headers
         response.addHeader("Content-Type", "text/html");
 

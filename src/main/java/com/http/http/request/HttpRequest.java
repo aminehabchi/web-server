@@ -25,7 +25,7 @@ public class HttpRequest {
     private String httpVersion;
     private String Authorization;
 
-    private HttpConnection connection;
+    private HttpConnection connection = HttpConnection.KEEP_ALIVE;
 
     private HashMap<String, String> headers = new HashMap<>();
     private HashMap<String, String> cookies = new HashMap<>();
