@@ -31,11 +31,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class Connector {
     private static final int MAX_HEADER_SIZE = 16 * 1024;
     private static final int MAX_QUEUE_SIZE = 1024;
-    private static final int MAX_BODY_SIZE = 50 * 1024 * 1024;
-    private static final int MAX_BODY_RAM = 10 * 1024;
+    private static final int MAX_BODY_SIZE = 1000 * 1024 * 1024;
+    private static final int MAX_BODY_RAM = 1024;
     private static final int MAX_CHUNK_LINE = 2048;
     private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
-    private static final boolean DEBUG_LOG = false;
+    private static final boolean DEBUG_LOG = true;
 
     private int[] ports;
     private long requestTimeout;
@@ -102,7 +102,7 @@ public class Connector {
                     }
                 } catch (IOException e) {
                     if (DEBUG_LOG) {
-                        System.err.println("[DEBUG] " + e.getMessage() + " line: 101");
+                        System.err.println("[DEBUG][reset] " + e.getMessage());
                     }
                 }
                 // try {
@@ -143,7 +143,7 @@ public class Connector {
                     }
                 } catch (IOException e) {
                     if (DEBUG_LOG) {
-                        System.out.println("[DEBUG] " + e.getMessage());
+                        System.err.println("[DEBUG][prepareForNextRequest] " + e.getMessage());
                     }
                 }
             }
@@ -225,6 +225,9 @@ public class Connector {
     }
 
     public void connect() throws IOException {
+        if (DEBUG_LOG) {
+            System.out.println("[DEBUG][handleRead] key.interestOps(): ");
+        }
         selector = Selector.open();
         for (int port : ports) {
             serverChanel = ServerSocketChannel.open();
@@ -265,7 +268,7 @@ public class Connector {
             }
         } catch (IOException e) {
             if (DEBUG_LOG) {
-                System.out.println("[DEBUG] Line 336 " + e.getMessage());
+                System.err.println("[DEBUG][closingAndDeleteFile] " + e.getMessage());
             }
         }
         try {
@@ -273,7 +276,7 @@ public class Connector {
                 Files.delete(ctx.tmpFile);
             }
         } catch (IOException e) {
-            System.out.println("[DEBUG] Line 344 " + e.getMessage());
+            System.err.println("[DEBUG][closingAndDeleteFile] failed to delete tmp file: " + e.getMessage());
         }
         ctx.tmpFile = null;
         ctx.fileOutputStream = null;
@@ -341,7 +344,7 @@ public class Connector {
         }
 
         if (DEBUG_LOG) {
-            System.out.println("key.interestOps(): " + key.interestOps());
+            System.out.println("[DEBUG][handleRead] key.interestOps(): " + key.interestOps());
         }
 
         try {
@@ -354,7 +357,7 @@ public class Connector {
 
             if (bytesRead == -1) {
                 if (DEBUG_LOG) {
-                    System.out.println("[DEBUG] Closing connection: Client sent EOF");
+                    System.out.println("[DEBUG][handleRead] Closing connection: Client sent EOF");
                 }
 
                 if (ctx.isFileProcessing) {
@@ -374,8 +377,8 @@ public class Connector {
                         while (ctx.readBuffer.hasRemaining() && !ctx.isHeaderComplete()) {
                             if (ctx.headerBytesLen >= MAX_HEADER_SIZE) {
                                 if (DEBUG_LOG) {
-                                    System.err.println("[DEBUG] Closing connection: Header exceeds max size ("
-                                            + MAX_HEADER_SIZE + " bytes)");
+                                    System.err.println("[DEBUG][handleRead] Header exceeds max size (" + MAX_HEADER_SIZE
+                                            + " bytes)");
                                 }
                                 // we should create a response that return 400
                                 clientChannel.close();
@@ -405,9 +408,12 @@ public class Connector {
                         // System.out.println("[DEBUG] meta-length: " + meta.contentLength);
 
                         if (meta.chunked && meta.contentLength > 0) {
+                            if (DEBUG_LOG) {
+                                System.err.println(
+                                        "[DEBUG][handleRead] chunked transfer with Content-Length present; closing connection");
+                            }
                             clientChannel.close();
                             key.cancel();
-                            // 400 error
                             return;
                         }
                         ctx.chunked = meta.chunked;
@@ -416,9 +422,12 @@ public class Connector {
                         ctx.isGet = meta.isGet;
                         if (ctx.isFileProcessing && ctx.fileOutputStream == null) {
                             if (ctx.contentLength > MAX_BODY_SIZE) {
+                                if (DEBUG_LOG) {
+                                    System.err.println("[DEBUG][handleRead] contentLength exceeds MAX_BODY_SIZE: "
+                                            + ctx.contentLength);
+                                }
                                 clientChannel.close();
                                 key.cancel();
-                                // 400 error
                                 return;
                             }
                             Files.createDirectories(ctx.dir);
@@ -427,13 +436,13 @@ public class Connector {
                             ctx.fileOutputStream = new FileOutputStream(ctx.tmpFile.toFile());
                         }
                         if (DEBUG_LOG) {
-                            System.out.println("[DEBUG] " + ctx.isGet);
+                            System.out.println("[DEBUG][handleRead] isGet=" + ctx.isGet);
                         }
                         if (!ctx.chunked) {
                             if ((ctx.contentLength < 0 && ctx.isGet == false)) {
                                 if (DEBUG_LOG) {
-                                    System.err.println("[DEBUG] Closing connection: Invalid Content-Length ("
-                                            + ctx.contentLength + ")");
+                                    System.err.println(
+                                            "[DEBUG][handleRead] Invalid Content-Length (" + ctx.contentLength + ")");
                                 }
                                 clientChannel.close();
                                 key.cancel();
@@ -455,7 +464,7 @@ public class Connector {
                             ctx.bodyBytesReceived += bytesToRead;
                         } else if (ctx.isFileProcessing) {
                             if (DEBUG_LOG) {
-                                System.out.println("[DEBUG] " + "it's a file processing");
+                                System.out.println("[DEBUG][handleRead] file processing active");
                             }
                             // if (ctx.contentLength > MAX_BODY_SIZE) {
                             // ctx.fileOutputStream.close();
@@ -499,7 +508,7 @@ public class Connector {
                             || (ctx.chunked && ctx.trailersComplete);
                     if (ctx.isHeaderComplete() && bodyReady) {
                         if (DEBUG_LOG) {
-                            System.out.println("Request complete, queuing for processing...");
+                            System.out.println("[DEBUG][handleRead] Request complete, queuing for processing...");
                         }
                         byte[] headerCopy = Arrays.copyOf(ctx.headerBytes, ctx.headerEndIndex);
                         byte[] bodyCopy;
@@ -522,7 +531,7 @@ public class Connector {
         } catch (IOException e) {
             try {
                 if (DEBUG_LOG) {
-                    System.err.println("[DEBUG] Closing connection: IOException during read - " + e.getMessage());
+                    System.err.println("[DEBUG][handleRead] IOException during read - " + e.getMessage());
                 }
                 clientChannel.close();
                 key.cancel();
@@ -539,7 +548,7 @@ public class Connector {
 
         String headers = new String(headerBytes, 0, headerLength, StandardCharsets.UTF_8);
         if (DEBUG_LOG) {
-            System.out.println("[DEBUG] header: " + headers);
+            System.out.println("[DEBUG][parseContentMeta] header: " + headers);
         }
 
         String[] lines = headers.split("\r\n");
@@ -551,7 +560,7 @@ public class Connector {
         for (String line : lines) {
             String lower = line.toLowerCase();
             if (DEBUG_LOG) {
-                System.out.println("++ " + lower);
+                System.out.println("[DEBUG][parseContentMeta] header line: " + lower);
             }
             if (lower.startsWith("content-length:")) {
                 try {
@@ -603,10 +612,10 @@ public class Connector {
                 try {
                     size = Integer.parseInt(sizeLine, 16);
                 } catch (NumberFormatException e) {
-                    clientChannel.close();
                     if (DEBUG_LOG) {
-                        System.err.println("[DEBUG] Closing connection: Invalid chunk format " + e.getMessage());
+                        System.err.println("[DEBUG][accumulateChunkedBody] Invalid chunk format: " + e.getMessage());
                     }
+                    clientChannel.close();
                     // we need here a 400 responde
                     key.cancel();
                     return false;
@@ -675,6 +684,9 @@ public class Connector {
                 int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
                 if (bytesToRead > 0) {
                     if (ctx.totalBodyBytes + bytesToRead > MAX_BODY_SIZE) {
+                        if (DEBUG_LOG) {
+                            System.err.println("[DEBUG][accumulateChunkedBody] total body size exceeds MAX_BODY_SIZE");
+                        }
                         clientChannel.close();
                         key.cancel();
                         return false;
@@ -696,6 +708,9 @@ public class Connector {
                 int bytesToRead = Math.min(remainingBody, ctx.readBuffer.remaining());
                 if (bytesToRead > 0) {
                     if (ctx.totalBodyBytes + bytesToRead > MAX_BODY_SIZE) {
+                        if (DEBUG_LOG) {
+                            System.err.println("[DEBUG][accumulateChunkedBody] total body size exceeds MAX_BODY_SIZE");
+                        }
                         clientChannel.close();
                         key.cancel();
                         return false;
@@ -729,6 +744,9 @@ public class Connector {
                 ctx.pendingCrlfHalf = false;
                 return true;
             }
+            if (DEBUG_LOG) {
+                System.err.println("[DEBUG][consumeChunkCrlf] invalid CRLF sequence");
+            }
             channel.close();
             key.cancel();
             return false;
@@ -738,6 +756,9 @@ public class Connector {
                 ctx.pendingCrlfHalf = true;
                 ctx.readBuffer.compact();
                 return false;
+            }
+            if (DEBUG_LOG) {
+                System.err.println("[DEBUG][consumeChunkCrlf] invalid CRLF sequence");
             }
             channel.close();
             key.cancel();
@@ -809,24 +830,24 @@ public class Connector {
 
         try {
             if (ctx.writeBuffer != null) {
-                int written = clientChannel.write(ctx.writeBuffer);
+                clientChannel.write(ctx.writeBuffer);
                 ctx.updateActivity();
                 if (!ctx.writeBuffer.hasRemaining()) {
                     ctx.reset();
                     key.interestOps(SelectionKey.OP_READ);
                 }
                 if (ctx.isConnectionClose) {
-                    clientChannel.close();
                     if (DEBUG_LOG) {
-                        System.out.println("[DEBUG] Closing connection: " + "Connection type is close");
+                        System.out.println("[DEBUG][handleWrite] closing after write (Connection: close)");
                     }
+                    clientChannel.close();
                 }
             }
 
         } catch (IOException e) {
             try {
                 if (DEBUG_LOG) {
-                    System.err.println("[DEBUG] Closing connection: IOException during write - " + e.getMessage());
+                    System.err.println("[DEBUG][handleWrite] IOException during write - " + e.getMessage());
                 }
                 clientChannel.close();
                 key.cancel();
@@ -845,8 +866,8 @@ public class Connector {
                 if (ctx != null && currentTime - ctx.lastActivity > requestTimeout) {
                     try {
                         if (DEBUG_LOG) {
-                            System.out.println(
-                                    "[DEBUG] Closing connection: Request timeout (" + requestTimeout + "ms inactive)");
+                            System.out.println("[DEBUG][checkTimeouts] Closing connection: Request timeout ("
+                                    + requestTimeout + "ms inactive)");
                         }
                         key.channel().close();
                         key.cancel();
@@ -881,31 +902,36 @@ public class Connector {
     List<HttpResponse> PendingCgiresponses = new ArrayList<>();
 
     public void registerPendingCgiResponse(HttpResponse response) {
-
-        PendingCgiresponses.add(response);
-
+        synchronized (PendingCgiresponses) {
+            PendingCgiresponses.add(response);
+        }
     }
 
     public void processPendingCGIResponses() {
-        Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
-
-        while (iterator.hasNext()) {
-            HttpResponse response = iterator.next();
-
-            if (response.processCgiOutput()) {
-                iterator.remove();
-                writeToClient(response.getClient(), response.toBytes(), response.getConnection());
+        synchronized (PendingCgiresponses) {
+            Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
+            while (iterator.hasNext()) {
+                HttpResponse response = iterator.next();
+                if (response.processCgiOutput()) {
+                    iterator.remove();
+                    writeToClient(response.getClient(), response.toBytes(), response.getConnection());
+                }
             }
-            // If not finished and no data, leave it in the list for next loop
         }
     }
 
     public void disconnect() {
         try {
             if (selector != null && selector.isOpen()) {
+                if (DEBUG_LOG) {
+                    System.out.println("[DEBUG][disconnect] closing selector");
+                }
                 selector.close();
             }
             if (serverChanel != null && serverChanel.isOpen()) {
+                if (DEBUG_LOG) {
+                    System.out.println("[DEBUG][disconnect] closing server channel");
+                }
                 serverChanel.close();
             }
             System.out.println("Server on ports " + ports + " stopped.");
