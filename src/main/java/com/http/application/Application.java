@@ -132,7 +132,6 @@ public class Application {
             connector.writeToClient(client, res, HttpConnection.CLOSE);
             return;
         }
-        System.out.println(response.getConnection());
 
         /*************************************************************
          * Apply session management
