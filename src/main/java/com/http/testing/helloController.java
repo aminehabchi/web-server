@@ -13,11 +13,6 @@ public class helloController {
 
     @Get(path = "/hello")
     public String GETHelloRequest(HttpRequest req, HttpResponse res, @RequestHeader("User-Agent") String header) {
-        // while (true) {
-        //     if (req == null) {
-        //         break;
-        //     }
-        // }
         return "get => Hello, World!";
     }
 

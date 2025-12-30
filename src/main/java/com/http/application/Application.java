@@ -47,7 +47,7 @@ public class Application {
 
     public void handleClientRequest(Connector connector, SocketChannel client, byte[] requestData,
             String tempBodyfilePath) {
-        System.out.println();
+        System.out.println("[DEBUG][tempBodyfilePath] " + tempBodyfilePath);
         System.out.println();
         System.out.println("handleClientRequest");
         /******************************************
@@ -66,6 +66,7 @@ public class Application {
         HttpRequest request = null;
         try {
             request = RequestParser.parseRequest(result, tempBodyfilePath);
+            request.setTempBodyfilePath(tempBodyfilePath);
         } catch (Exception e) {
             response.setStatus(HttpStatus.BAD_REQUEST);
             response.setBody(e.getMessage().getBytes());

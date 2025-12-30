@@ -61,6 +61,7 @@ public class HttpRequest {
     }
 
     public byte[] getBodyAsByte() {
+        System.out.println("Temp body file path: " + tempBodyfilePath);
         if (tempBodyfilePath != null) {
             return Utils.readFromFile(tempBodyfilePath);
         }
