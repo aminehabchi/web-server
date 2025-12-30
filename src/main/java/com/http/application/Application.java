@@ -9,6 +9,7 @@ import com.http.application.filters.FilterChain;
 import com.http.application.routing.Router;
 import com.http.config.configFile.ConfigurationValidator;
 import com.http.config.connectors.Connector;
+import com.http.config.enums.HttpConnection;
 import com.http.config.enums.HttpStatus;
 import com.http.config.session.SessionManager;
 import com.http.http.request.HttpRequest;
@@ -126,6 +127,11 @@ public class Application {
 
     private void writeRsponseToClient(Connector connector, SocketChannel client, HttpRequest request,
             HttpResponse response) {
+        if (request == null || response == null) {
+            byte[] res = response.toBytes();
+            connector.writeToClient(client, res, HttpConnection.CLOSE);
+            return;
+        }
         /*************************************************************
          * Apply session management
          **************************************************************/
