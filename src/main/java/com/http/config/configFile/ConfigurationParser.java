@@ -4,34 +4,23 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+
 import com.http.config.enums.HttpMethod;
 import com.http.config.enums.HttpStatus;
 
 public class ConfigurationParser {
-    
-    private static class ParseException extends RuntimeException {
-        public ParseException(String message) {
-            super(message);
-        }
-        
-        public ParseException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
-    
-    public static List<ConfigServer> parse(String path) throws ParseException {
+
+    public static List<ConfigServer> parse(String path) {
         List<ConfigServer> servers = new ArrayList<>();
-        
+
         try {
             List<String> lines = Files.readAllLines(Path.of(path));
             Map<String, String> props = new HashMap<>();
 
             // Remove comments & empty lines
             for (String line : lines) {
-                lineNumber++;
                 line = line.trim();
-                
-                if (line.isEmpty() || line.startsWith("#")) {
+                if (line.isEmpty() || line.startsWith("#"))
                     continue;
 
                 int idx = line.indexOf('=');
