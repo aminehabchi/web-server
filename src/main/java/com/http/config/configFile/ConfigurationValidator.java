@@ -161,11 +161,32 @@ public class ConfigurationValidator {
 
         System.out.println("CGI HANDLER");
 
+        String[] extensions = { ".py", ".pl", ".sh" };
         String currentPath = request.getUrl().getPath();
-        String basePath = route.getPath();
-        String cgiName = currentPath.substring(basePath.length());
-        String[] ext = cgiName.split("\\.");
+        String basePath = route.getPath(); // e.g., "/cgi-bin"
+        String remainingPath = currentPath.substring(basePath.length()); // e.g., "/hello.py/hh/world"
 
+        // Find which extension matches
+        String cgiName = null;
+        String pathInfo = "";
+        for (String ext : extensions) {
+            int idx = remainingPath.indexOf(ext);
+            if (idx != -1) {
+                cgiName = remainingPath.substring(0, idx + ext.length()); // script name
+                pathInfo = remainingPath.substring(idx + ext.length()); // PATH_INFO
+                break;
+            }
+        }
+
+        if (cgiName == null) {
+            response.setStatus(HttpStatus.BAD_REQUEST);
+            response.setBody("No CGI script found!".getBytes());
+            return false;
+        } else {
+            System.out.println("CGI NAME  : " + cgiName); // e.g., /hello.py
+            System.out.println("PATH_INFO : " + pathInfo); // e.g., /hh/world
+        }
+        String[] ext = cgiName.split("\\.");
         if (ext == null || ext.length != 2) {
             response.setStatus(HttpStatus.BAD_REQUEST);
             response.setBody("Error : CGI file name".getBytes());
@@ -195,6 +216,8 @@ public class ConfigurationValidator {
             if (request.getBody() != null) {
                 env.put("CONTENT_LENGTH", String.valueOf(request.getBody().length));
             }
+
+            env.put("PATH_INFO", pathInfo);
 
             env.put("CONTENT_TYPE", request.getHeader("Content-Type") != null ? request.getHeader("Content-Type") : "");
             env.put("SCRIPT_FILENAME", cgiPath);
