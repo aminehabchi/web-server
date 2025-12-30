@@ -17,114 +17,123 @@ public class ConfigurationParser {
             List<String> lines = Files.readAllLines(Path.of(path));
             Map<String, String> props = new HashMap<>();
 
-            // remove comments and empty lines
+            // Remove comments & empty lines
             for (String line : lines) {
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("#"))
                     continue;
-                int idx = line.indexOf("=");
-                if (idx > 0) {
-                    String key = line.substring(0, idx).trim();
-                    String value = line.substring(idx + 1).trim();
-                    props.put(key, value);
-                }
+
+                int idx = line.indexOf('=');
+                if (idx <= 0)
+                    continue;
+
+                String key = line.substring(0, idx).trim();
+                String value = line.substring(idx + 1).trim();
+                props.put(key, value);
             }
 
-            // Determine server indices
-            Set<String> serverKeys = new HashSet<>();
+            // Collect server IDs
+            Set<String> serverIds = new HashSet<>();
             for (String key : props.keySet()) {
                 if (key.startsWith("server.")) {
                     String[] parts = key.split("\\.");
-                    if (parts.length > 1)
-                        serverKeys.add(parts[1]); // e.g., "1", "2"
+                    if (parts.length > 1) {
+                        serverIds.add(parts[1]);
+                    }
                 }
             }
 
-            for (String serverId : serverKeys) {
+            for (String serverId : serverIds) {
                 ConfigServer server = new ConfigServer();
 
-                // Hosts
+                /* ================= HOSTS ================= */
                 String hostsKey = "server." + serverId + ".hosts";
                 if (props.containsKey(hostsKey)) {
-                    server.setHosts(Arrays.asList(props.get(hostsKey).split(",")));
+                    Set<String> hosts = new HashSet<>();
+                    for (String h : props.get(hostsKey).split(",")) {
+                        hosts.add(h.trim());
+                    }
+                    server.setHosts(hosts);
                 }
 
-                // Ports
+                /* ================= PORTS ================= */
                 String portsKey = "server." + serverId + ".ports";
                 if (props.containsKey(portsKey)) {
-                    List<Integer> ports = new ArrayList<>();
+                    Set<Integer> ports = new HashSet<>();
                     for (String p : props.get(portsKey).split(",")) {
-                        ports.add(Integer.parseInt(p));
+                        ports.add(Integer.parseInt(p.trim()));
                     }
                     server.setPorts(ports);
                 }
 
-                // Default
+                /* ================= DEFAULT ================= */
                 String defaultKey = "server." + serverId + ".default";
                 if (props.containsKey(defaultKey)) {
                     server.setDefault(Boolean.parseBoolean(props.get(defaultKey)));
                 }
 
-                // Client Max Body Size
+                /* ================= CLIENT MAX BODY SIZE ================= */
                 String sizeKey = "server." + serverId + ".clientMaxBodySize";
                 if (props.containsKey(sizeKey)) {
                     server.setClientMaxBodySize(Long.parseLong(props.get(sizeKey)));
                 }
 
-                // Error pages
+                /* ================= ERROR PAGES ================= */
                 Map<Integer, String> errorPages = new HashMap<>();
+                String errorPrefix = "server." + serverId + ".errorPages.";
                 for (String key : props.keySet()) {
-                    String prefix = "server." + serverId + ".errorPages.";
-                    if (key.startsWith(prefix)) {
-                        int code = Integer.parseInt(key.substring(prefix.length()));
+                    if (key.startsWith(errorPrefix)) {
+                        int code = Integer.parseInt(key.substring(errorPrefix.length()));
                         errorPages.put(code, props.get(key));
                     }
                 }
                 server.setErrorPages(errorPages);
 
-                // Routes
+                /* ================= ROUTES ================= */
                 Map<String, ConfigRoute> routes = new HashMap<>();
                 int routeIndex = 1;
+
                 while (true) {
-                    String routePathKey = "server." + serverId + ".route." + routeIndex + ".path";
-                    if (!props.containsKey(routePathKey))
+                    String pathKey = "server." + serverId + ".route." + routeIndex + ".path";
+                    if (!props.containsKey(pathKey))
                         break;
 
                     ConfigRoute route = new ConfigRoute();
-                    String routePath = props.get(routePathKey);
+                    String routePath = props.get(pathKey).trim();
                     route.setPath(routePath);
 
+                    /* METHODS */
                     String methodsKey = "server." + serverId + ".route." + routeIndex + ".methods";
                     if (props.containsKey(methodsKey)) {
                         List<HttpMethod> methods = new ArrayList<>();
-
                         for (String m : props.get(methodsKey).split(",")) {
-                            HttpMethod method = HttpMethod.fromReason(m);
+                            HttpMethod method = HttpMethod.fromReason(m.trim());
                             if (method != null) {
                                 methods.add(method);
                             }
                         }
-
                         route.setMethods(methods);
                     }
 
+                    /* ROOT */
                     String rootKey = "server." + serverId + ".route." + routeIndex + ".root";
                     if (props.containsKey(rootKey)) {
                         route.setRoot(props.get(rootKey));
                     }
 
-                    String indexFileKey = "server." + serverId + ".route." + routeIndex + ".indexFile";
-                    if (props.containsKey(indexFileKey)) {
-                        route.setIndexFile(props.get(indexFileKey));
+                    /* INDEX FILE */
+                    String indexKey = "server." + serverId + ".route." + routeIndex + ".indexFile";
+                    if (props.containsKey(indexKey)) {
+                        route.setIndexFile(props.get(indexKey));
                     }
 
-                    String dirListingKey = "server." + serverId + ".route." + routeIndex + ".directoryListing";
-                    if (props.containsKey(dirListingKey)) {
-                        route.setDirectoryListing(
-                                Boolean.parseBoolean(props.get(dirListingKey)));
+                    /* DIRECTORY LISTING */
+                    String dirKey = "server." + serverId + ".route." + routeIndex + ".directoryListing";
+                    if (props.containsKey(dirKey)) {
+                        route.setDirectoryListing(Boolean.parseBoolean(props.get(dirKey)));
                     }
 
-                    // CGI scripts
+                    /* CGI */
                     Map<String, String> cgi = new HashMap<>();
                     String cgiPrefix = "server." + serverId + ".route." + routeIndex + ".cgi.";
                     for (String key : props.keySet()) {
@@ -135,7 +144,7 @@ public class ConfigurationParser {
                     }
                     route.setCgi(cgi);
 
-                    // Redirection
+                    /* REDIRECTION */
                     String redirectStatusKey = "server." + serverId + ".route." + routeIndex + ".redirect.status";
                     String redirectToKey = "server." + serverId + ".route." + routeIndex + ".redirect.to";
 
@@ -144,31 +153,25 @@ public class ConfigurationParser {
                         HttpStatus status;
 
                         try {
-                            // First try parsing as number (301, 302, etc.)
-                            int code = Integer.parseInt(statusStr);
-                            status = HttpStatus.fromCode(code);
+                            status = HttpStatus.fromCode(Integer.parseInt(statusStr));
                         } catch (NumberFormatException e) {
-                            // If not a number, try parsing as reason string (e.g., "Found")
                             status = HttpStatus.fromReason(statusStr);
                         }
 
-                        route.setRedirection(props.get(redirectToKey));
                         route.setRedirectionStatus(status);
+                        route.setRedirection(props.get(redirectToKey));
                     }
 
-                    // 🔑 store by path
                     routes.put(routePath, route);
-
                     routeIndex++;
                 }
 
                 server.setRoutes(routes);
-
                 servers.add(server);
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to parse config file", e);
         }
 
         return servers;
