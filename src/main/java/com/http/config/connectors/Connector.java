@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class Connector {
     private static final int MAX_HEADER_SIZE = 16 * 1024;
     private static final int MAX_QUEUE_SIZE = 1024;
-    private static final int MAX_BODY_SIZE = 1000 * 1024 * 1024;
+    private static final long  MAX_BODY_SIZE = Long.MAX_VALUE;
     private static final int MAX_BODY_RAM = 10 * 1024 *1024;
     private static final int MAX_CHUNK_LINE = 2048;
     private static final byte[] HEADER_DELIMITER = new byte[] { '\r', '\n', '\r', '\n' };
@@ -424,8 +424,9 @@ public class Connector {
                             if (ctx.contentLength > MAX_BODY_SIZE) {
                                 if (DEBUG_LOG) {
                                     System.err.println("[DEBUG][handleRead] contentLength exceeds MAX_BODY_SIZE: "
-                                            + ctx.contentLength);
+                                            + ctx.contentLength + " bytes " + MAX_BODY_SIZE);
                                 }
+                                // bad request
                                 clientChannel.close();
                                 key.cancel();
                                 return;
