@@ -887,17 +887,17 @@ public class Connector {
     }
 
     public void processPendingCGIResponses() {
-
         Iterator<HttpResponse> iterator = PendingCgiresponses.iterator();
-        if (iterator.hasNext()) {
+
+        while (iterator.hasNext()) {
             HttpResponse response = iterator.next();
-            if (response.prossessCgiOutput()) {
+
+            if (response.processCgiOutput()) {
                 iterator.remove();
-                System.out.println("=== Writing CGI Response to Client ===" + response.getConnection());
                 writeToClient(response.getClient(), response.toBytes(), response.getConnection());
             }
+            // If not finished and no data, leave it in the list for next loop
         }
-
     }
 
     public void disconnect() {

@@ -36,27 +36,38 @@ public class HttpResponse {
     byte[] buffer;
     int read;
 
-    public boolean prossessCgiOutput() {
-        if (in == null)
-            return true;
-
-        try {
-            int bytesAvailable = in.available();
-            if (bytesAvailable > 0) {
-                int toRead = Math.min(buffer.length, bytesAvailable);
-                read = in.read(buffer, 0, toRead); 
-                while (read > 0) {
-                    // append to body
-                    byte[] newBody = new byte[body.length + read];
-                    System.arraycopy(body, 0, newBody, 0, body.length);
-                    System.arraycopy(buffer, 0, newBody, body.length, read);
-                    body = newBody;
-                }
-            }
-
+    public boolean processCgiOutput() {
+        if (in == null) {
             isFiniched = true;
             addContentLengthHeader();
             return true;
+        }
+
+        try {
+            int bytesAvailable = in.available();
+
+            if (bytesAvailable == 0) {
+                // No data ready yet
+                return false;
+            }
+
+            // Read up to buffer size or available bytes
+            int toRead = Math.min(buffer.length, bytesAvailable);
+            int bytesRead = in.read(buffer, 0, toRead);
+
+            if (bytesRead > 0) {
+                // Append read bytes to body
+                byte[] newBody = new byte[body.length + bytesRead];
+                System.arraycopy(body, 0, newBody, 0, body.length);
+                System.arraycopy(buffer, 0, newBody, body.length, bytesRead);
+                body = newBody;
+            } else if (bytesRead == -1) {
+                // End of stream
+                isFiniched = true;
+            }
+            addContentLengthHeader();
+
+            return true; // We read something
 
         } catch (IOException e) {
             body = "Error reading stream cgi".getBytes(StandardCharsets.UTF_8);
