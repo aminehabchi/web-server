@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.http.config.enums.HttpStatus;
+import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 
 public class Utils {
@@ -31,7 +32,8 @@ public class Utils {
         }
     }
 
-    public static void serveDirectoryListing(HttpResponse response, String directory, String basePath) {
+    public static void serveDirectoryListing(HttpRequest request, HttpResponse response, String directory,
+            String basePath) {
         Path dirPath = Paths.get(directory);
         if (!Files.exists(dirPath) || !Files.isDirectory(dirPath)) {
             response.setStatus(HttpStatus.NOT_FOUND);
@@ -42,7 +44,7 @@ public class Utils {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dirPath)) {
             StringBuilder fileList = new StringBuilder("<html><body><ul>");
             for (Path file : stream) {
-                fileList.append("<li><a href=\"").append("http://localhost:8888") // Adjust host/port if needed
+                fileList.append("<li><a href=\"").append("http://localhost:"+Integer.toString(request.getPort())) // Adjust host/port if needed
                         .append(basePath).append("/" + file.getFileName()).append("\">").append(file.getFileName())
                         .append("</a></li>");
             }

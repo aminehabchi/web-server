@@ -268,7 +268,7 @@ public class ConfigurationValidator {
         if (currentPath.equals(basePath)) {
             if (route.isDirectoryListing()) {
                 // Serve directory listing
-                Utils.serveDirectoryListing(response, SOURCE + route.getRoot(), basePath);
+                Utils.serveDirectoryListing(request,response, SOURCE + route.getRoot(), basePath);
             } else if (route.getIndexFile() != null) {
                 // Serve index file
                 String indexPath = SOURCE + route.getRoot() + "/" + route.getIndexFile();
