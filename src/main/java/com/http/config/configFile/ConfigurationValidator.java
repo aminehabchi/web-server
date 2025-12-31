@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.http.application.ResourceResolver.StaticResourceResolver;
 import com.http.config.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
@@ -144,7 +145,7 @@ public class ConfigurationValidator {
                 return false;
             }
 
-            if (!StaticResourceResolver(request, response, route)) {
+            if (!StaticResourceResolver.resolveRoute(request, response, route)) {
                 return false;
             }
 
@@ -252,49 +253,6 @@ public class ConfigurationValidator {
         } catch (Exception e) {
             response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
             response.setBody(("CGI execution error: " + e.getMessage()).getBytes());
-        }
-
-        return false;
-    }
-
-    public boolean StaticResourceResolver(HttpRequest request, HttpResponse response, ConfigRoute route) {
-        if (route == null || route.getRoot() == null) {
-            return true;
-        }
-
-        String currentPath = request.getUrl().getPath();
-        String basePath = route.getPath();
-
-        // If the requested path matches the route base
-        if (currentPath.equals(basePath)) {
-            if (route.isDirectoryListing()) {
-                // Serve directory listing
-                Utils.serveDirectoryListing(request, response, SOURCE + route.getRoot(), basePath);
-            } else if (route.getIndexFile() != null) {
-                // Serve index file
-                String indexPath = SOURCE + route.getRoot() + "/" + route.getIndexFile();
-                Utils.serveFile(response, indexPath, SOURCE + route.getRoot());
-            } else {
-                // Directory listing not allowed
-                response.setStatus(HttpStatus.FORBIDDEN);
-                response.setBody("You are not allowed to list this directory".getBytes());
-            }
-            return false;
-        }
-
-        // Handle files under the route
-        String fileName = currentPath.substring(basePath.length());
-        String filePath = SOURCE + route.getRoot() + fileName;
-        if (!Utils.serveFile(response, filePath, SOURCE + route.getRoot())) {
-            // Fallback to index file if exists
-            if (route.getIndexFile() != null) {
-                Utils.serveFile(response, SOURCE + route.getRoot() + "/" + route.getIndexFile(),
-                        SOURCE + route.getRoot());
-            } else {
-                response.setStatus(HttpStatus.NOT_FOUND);
-                response.setBody(("File " + fileName + " : Not found").getBytes());
-            }
-            return false;
         }
 
         return false;
