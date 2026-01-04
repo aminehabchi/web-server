@@ -1,4 +1,4 @@
-package com.http.config.enums;
+package com.http.http.enums;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,14 +1,13 @@
-package com.http.config.connectors;
+package com.http.application.connectors;
 
 import com.http.application.Application;
-import com.http.config.defaults.DefaultConnectorConfig;
-import com.http.config.enums.HttpConnection;
+import com.http.http.enums.HttpConnection;
 import com.http.http.response.HttpResponse;
+import com.http.utils.Default;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -188,15 +187,15 @@ public class Connector {
     }
 
     public Connector() {
-        // this.port = DefaultConnectorConfig.DEFAULT_PORT;
-        this.requestTimeout = DefaultConnectorConfig.DEFAULT_REQUEST_TIMEOUT;
+        // this.port = Default.DEFAULT_PORT;
+        this.requestTimeout = Default.DEFAULT_REQUEST_TIMEOUT;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
     }
 
     public Connector(int[] ports) {
 
         this.ports = ports;
-        this.requestTimeout = DefaultConnectorConfig.DEFAULT_REQUEST_TIMEOUT;
+        this.requestTimeout = Default.DEFAULT_REQUEST_TIMEOUT;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
     }
 
@@ -204,7 +203,7 @@ public class Connector {
 
         this.validateRequestTimeout(requestTimeout);
         this.requestTimeout = requestTimeout;
-        // this.port = DefaultConnectorConfig.DEFAULT_PORT;
+        // this.port = Default.DEFAULT_PORT;
         this.globalRequestQueue = new ConcurrentLinkedQueue<>();
     }
 

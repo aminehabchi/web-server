@@ -6,7 +6,7 @@ import java.lang.reflect.Parameter;
 import com.http.annotation.parameters.RequestBody;
 import com.http.annotation.parameters.RequestHeader;
 import com.http.annotation.parameters.RequestParam;
-import com.http.config.session.Session;
+import com.http.application.session.Session;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 import com.http.utils.JSON;

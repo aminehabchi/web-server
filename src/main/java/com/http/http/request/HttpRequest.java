@@ -2,10 +2,10 @@ package com.http.http.request;
 
 import java.util.HashMap;
 
-import com.http.config.enums.HttpConnection;
-import com.http.config.enums.HttpMethod;
-import com.http.config.session.Session;
-import com.http.config.url.Url;
+import com.http.application.session.Session;
+import com.http.http.enums.HttpConnection;
+import com.http.http.enums.HttpMethod;
+import com.http.http.url.Url;
 import com.http.utils.Utils;
 
 import lombok.Getter;

@@ -1,4 +1,4 @@
-package com.http.config.cookie;
+package com.http.http.cookie;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -1,10 +1,10 @@
-package com.http.config.session;
+package com.http.application.session;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.http.config.cookie.Cookie;
+import com.http.http.cookie.Cookie;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 

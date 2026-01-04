@@ -9,9 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.http.config.cookie.Cookie;
-import com.http.config.enums.HttpConnection;
-import com.http.config.enums.HttpStatus;
+import com.http.http.cookie.Cookie;
+import com.http.http.enums.HttpConnection;
+import com.http.http.enums.HttpStatus;
 
 import lombok.Getter;
 import lombok.Setter;

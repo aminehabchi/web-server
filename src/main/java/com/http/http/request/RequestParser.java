@@ -1,7 +1,7 @@
 package com.http.http.request;
 
-import com.http.config.enums.HttpMethod;
-import com.http.config.url.Url;
+import com.http.http.enums.HttpMethod;
+import com.http.http.url.Url;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -86,7 +86,7 @@ public class RequestParser {
                 }
 
                 if (key.equalsIgnoreCase("Connection")) {
-                    httpRequest.setConnection(com.http.config.enums.HttpConnection.fromHeader(value));
+                    httpRequest.setConnection(com.http.http.enums.HttpConnection.fromHeader(value));
                 }
             }
 

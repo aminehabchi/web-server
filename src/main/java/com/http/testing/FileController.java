@@ -10,7 +10,7 @@ import java.util.Map;
 import com.http.annotation.classes.Controller;
 import com.http.annotation.methodes.Post;
 import com.http.annotation.parameters.RequestHeader;
-import com.http.config.enums.HttpStatus;
+import com.http.http.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 

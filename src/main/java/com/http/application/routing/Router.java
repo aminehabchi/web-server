@@ -3,7 +3,7 @@ package com.http.application.routing;
 import com.http.annotation.methodes.Delete;
 import com.http.annotation.methodes.Get;
 import com.http.annotation.methodes.Post;
-import com.http.config.enums.HttpMethod;
+import com.http.http.enums.HttpMethod;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;

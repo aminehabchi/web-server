@@ -1,9 +1,9 @@
-package com.http.config.session;
+package com.http.application.session;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.http.config.cookie.Cookie;
+import com.http.http.cookie.Cookie;
 
 public class Session {
     private final String id;

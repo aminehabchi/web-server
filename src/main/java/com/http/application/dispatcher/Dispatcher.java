@@ -3,7 +3,7 @@ package com.http.application.dispatcher;
 import java.lang.reflect.Method;
 
 import com.http.application.routing.*;
-import com.http.config.enums.HttpStatus;
+import com.http.http.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 import com.http.utils.JSON;

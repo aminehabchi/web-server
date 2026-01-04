@@ -2,7 +2,7 @@ package com.http.testing;
 
 import com.http.annotation.classes.Controller;
 import com.http.annotation.methodes.Get;
-import com.http.config.enums.HttpStatus;
+import com.http.http.enums.HttpStatus;
 import com.http.http.response.HttpResponse;
 
 @Controller

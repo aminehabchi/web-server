@@ -1,4 +1,4 @@
-package com.http.config.enums;
+package com.http.http.enums;
 
 public enum HttpConnection {
 

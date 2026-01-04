@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import com.http.config.enums.HttpStatus;
+import com.http.http.enums.HttpStatus;
 import com.http.http.request.HttpRequest;
 import com.http.http.response.HttpResponse;
 

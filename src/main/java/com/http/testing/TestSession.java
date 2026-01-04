@@ -2,7 +2,7 @@ package com.http.testing;
 
 import com.http.annotation.classes.Controller;
 import com.http.annotation.methodes.Get;
-import com.http.config.session.Session;
+import com.http.application.session.Session;
 
 @Controller
 public class TestSession {
