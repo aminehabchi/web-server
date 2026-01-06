@@ -33,13 +33,11 @@ public class Application {
         this.dispatcher = new Dispatcher(new Router(this.appContext.getControllerBeans()));
         this.filaterChain = new FilterChain(this.appContext.getFilterBeans());
         this.sessionManager = new SessionManager();
-        this.connector = new Connector();
+        this.connector = new Connector(this.config, this);
     }
 
     // ---------------- Connecters ----------------
     public void start() throws Exception {
-        connector.setApplication(this);
-        connector.setPorts(this.config.getPorts());
         connector.connect();
     }
 
@@ -135,14 +133,8 @@ public class Application {
         /*************************************************************
          * Write response back to client
          *************************************************************/
-        if (response.isProssesse()) {
-            response.setClient(client);
-            response.setConnection(request.getConnection());
-            response.setConnection(request.getConnection());
-            connector.registerPendingCgiResponse(response);
-        } else {
-            byte[] res = response.toBytes();
-            connector.writeToClient(client, res, request.getConnection());
-        }
+        byte[] res = response.toBytes();
+        connector.writeToClient(client, res, request.getConnection());
+
     }
 }
