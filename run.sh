@@ -1,24 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-if ! command -v java &> /dev/null; then
-    exit 1
-fi
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-if ! command -v mvn &> /dev/null; then
-    mkdir -p target/classes
-    find src/main/java -name "*.java" > sources.txt
-    javac -d target/classes @sources.txt
-    rm sources.txt
-    
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
-else
-    mvn clean compile -q
-    
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
-fi
+echo "==> Building framework..."
+mvn -f "$ROOT/framework/pom.xml" install -q
 
-mvn exec:java -Dexec.mainClass="com.http.Main"
+echo "==> Compiling test-project..."
+mvn -f "$ROOT/test-project/pom.xml" compile -q
+
+echo "==> Running test-project..."
+mvn -f "$ROOT/test-project/pom.xml" exec:java -Dexec.mainClass=com.app.Main
